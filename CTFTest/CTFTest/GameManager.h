@@ -21,4 +21,13 @@ private:
     QGraphicsTextItem* timeRemainingTextItem;
     QPointer<QGraphicsTextItem> blueScoreTextItem;
     QPointer<QGraphicsTextItem> redScoreTextItem;
+    QGraphicsScene* scene;
+    QTimer* gameTimer;
+    int timeRemaining;
+    int blueScore;
+    int redScore;
+    void stopGame();
+    void declareWinner();
+    void updateScoreDisplay();
+    void updateTimeDisplay();
 };

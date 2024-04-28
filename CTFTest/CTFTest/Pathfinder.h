@@ -18,8 +18,6 @@ class Pathfinder {
 public:
     Pathfinder(int gameFieldWidth, int gameFieldHeight);
     std::vector<std::pair<int, int>> findPath(int startX, int startY, int goalX, int goalY);
-    std::pair<int, int> getRandomFreePosition();
-    bool isObstacle(int x, int y);
 
 private:
     int gameFieldWidth;

@@ -16,45 +16,51 @@ double Pathfinder::calculateHeuristic(int x1, int y1, int x2, int y2) {
 }
 
 std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, int goalX, int goalY) {
-    std::priority_queue<std::pair<double, std::pair<int, int>>,
-        std::vector<std::pair<double, std::pair<int, int>>>,
-        std::greater<std::pair<double, std::pair<int, int>>>> openSet;
-    std::unordered_set<std::pair<int, int>, pair_hash> openSetElements;
+    std::priority_queue<std::tuple<double, double, std::pair<int, int>>,
+        std::vector<std::tuple<double, double, std::pair<int, int>>>,
+        std::greater<std::tuple<double, double, std::pair<int, int>>>> openSet;
     std::unordered_set<std::pair<int, int>, pair_hash> closedSet;
     std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> cameFrom;
+    std::unordered_map<std::pair<int, int>, double, pair_hash> gScore;
 
-    openSet.push({ 0.0, {startX, startY} });
-    openSetElements.insert({ startX, startY });
+    auto heuristic = [&](int x, int y) {
+        return std::abs(x - goalX) + std::abs(y - goalY);
+        };
+
+    gScore[{startX, startY}] = 0.0;
+    openSet.emplace(heuristic(startX, startY), 0.0, std::make_pair(startX, startY));
 
     while (!openSet.empty()) {
-        std::pair<int, int> current = openSet.top().second;
+        auto [_, currentGScore, current] = openSet.top();
         openSet.pop();
-        openSetElements.erase(current);
 
-        if (current.first == goalX && current.second == goalY) {
+        if (current == std::make_pair(goalX, goalY)) {
             std::vector<std::pair<int, int>> path;
             while (current != std::make_pair(startX, startY)) {
                 path.push_back(current);
                 current = cameFrom[current];
             }
+            path.push_back({ startX, startY });
             std::reverse(path.begin(), path.end());
             return path;
         }
 
+        if (closedSet.count(current) > 0) {
+            continue;
+        }
         closedSet.insert(current);
 
         for (const auto& neighbor : getNeighbors(current.first, current.second)) {
-            if (closedSet.find(neighbor) != closedSet.end()) {
+            if (closedSet.count(neighbor) > 0) {
                 continue;
             }
 
-            double tentativeGScore = calculateHeuristic(startX, startY, neighbor.first, neighbor.second);
-            double fScore = tentativeGScore + calculateHeuristic(neighbor.first, neighbor.second, goalX, goalY);
-
-            if (openSetElements.find(neighbor) == openSetElements.end()) {
-                openSet.push({ fScore, neighbor });
-                openSetElements.insert(neighbor);
+            double tentativeGScore = currentGScore + 1;
+            if (gScore.count(neighbor) == 0 || tentativeGScore < gScore[neighbor]) {
                 cameFrom[neighbor] = current;
+                gScore[neighbor] = tentativeGScore;
+                double fScore = tentativeGScore + heuristic(neighbor.first, neighbor.second);
+                openSet.emplace(fScore, tentativeGScore, neighbor);
             }
         }
     }
@@ -74,6 +80,7 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
             neighbors.push_back({ newX, newY });
         }
     }
+
     return neighbors;
 }
 
