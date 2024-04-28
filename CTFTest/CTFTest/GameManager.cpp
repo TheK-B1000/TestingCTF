@@ -111,7 +111,7 @@ GameManager::GameManager(QWidget* parent) : QGraphicsView(parent) {
 
 
     // Start a timer to update agents
-    int gameDuration = 600; // 10 minutes in seconds
+    int gameDuration = 2000;
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
@@ -211,4 +211,106 @@ void GameManager::updateScoreDisplay() {
 
 void GameManager::updateTimeDisplay() {
     timeRemainingTextItem->setPlainText("Time Remaining: " + QString::number(timeRemaining));
+}
+
+void GameManager::runTestCase1() {
+    // Test case 1: Default game setup (4 blue agents, 4 red agents)
+}
+
+void GameManager::runTestCase2(int agentCount) {
+    // Clear the existing agents
+    blueAgents.clear();
+    redAgents.clear();
+
+    int blueCount = agentCount / 2;
+    int redCount = agentCount - blueCount;
+
+    // Set up the new agents
+    for (int i = 0; i < blueCount; ++i) {
+        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, scene);
+        blueAgent->setPos(QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
+        scene->addItem(blueAgent.get());
+        blueAgents.push_back(blueAgent);
+    }
+
+    for (int i = 0; i < redCount; ++i) {
+        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, scene);
+        redAgent->setPos(800 - QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
+        scene->addItem(redAgent.get());
+        redAgents.push_back(redAgent);
+    }
+
+    // Set up the score displays
+    blueScoreTextItem->setPlainText("Blue Score: 0");
+    redScoreTextItem->setPlainText("Red Score: 0");
+
+    // Add time remaining display
+    timeRemainingTextItem->setPlainText("Time Remaining: 600");
+
+    // Reset the game state
+    timeRemaining = 600;
+    blueScore = 0;
+    redScore = 0;
+
+    // Start the game loop
+    gameTimer->start(33);
+}
+void GameManager::runTestCase3() {
+    // Test case 3: Change the position of team zones and flags
+    QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
+    QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
+
+    // Find the blue team zone
+    QGraphicsEllipseItem* blueZone = nullptr;
+    for (QGraphicsItem* item : scene->items()) {
+        if (QGraphicsEllipseItem* ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
+            QPen pen = ellipseItem->pen();
+            if (pen.color() == Qt::blue && pen.width() == 3) {
+                blueZone = ellipseItem;
+                break;
+            }
+        }
+    }
+
+    if (blueZone) {
+        // Move the blue team zone to the top-left corner
+        QRectF blueZoneRect(0, 0, 100, 100);
+        blueZone->setRect(blueZoneRect);
+
+        // Move the blue flag to the center of the new team zone position
+        QPointF blueFlagPos = blueZoneRect.center();
+        QPolygon blueTriangle;
+        blueTriangle << QPoint(blueFlagPos.x() - 10, blueFlagPos.y() - 20)
+            << QPoint(blueFlagPos.x(), blueFlagPos.y())
+            << QPoint(blueFlagPos.x() + 10, blueFlagPos.y() - 20);
+        blueFlag->setPolygon(blueTriangle);
+        scene->addItem(blueFlag);
+    }
+
+    // Find the red team zone
+    QGraphicsEllipseItem* redZone = nullptr;
+    for (QGraphicsItem* item : scene->items()) {
+        if (QGraphicsEllipseItem* ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
+            QPen pen = ellipseItem->pen();
+            if (pen.color() == Qt::red && pen.width() == 3) {
+                redZone = ellipseItem;
+                break;
+            }
+        }
+    }
+
+    if (redZone) {
+        // Move the red team zone to the bottom-right corner
+        QRectF redZoneRect(700, 500, 100, 100);
+        redZone->setRect(redZoneRect);
+
+        // Move the red flag to the center of the new team zone position
+        QPointF redFlagPos = redZoneRect.center();
+        QPolygon redTriangle;
+        redTriangle << QPoint(redFlagPos.x() - 10, redFlagPos.y() - 20)
+            << QPoint(redFlagPos.x(), redFlagPos.y())
+            << QPoint(redFlagPos.x() + 10, redFlagPos.y() - 20);
+        redFlag->setPolygon(redTriangle);
+        scene->addItem(redFlag);
+    }
 }
