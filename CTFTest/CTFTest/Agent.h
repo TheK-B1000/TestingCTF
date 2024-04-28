@@ -16,18 +16,18 @@ public:
 
     void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, int elapsedTime);
 
-    float calculateDistance(const QPointF& pos1, const QPointF& pos2);
+    float calculateDistance(const QPointF& pos1, const QPointF& pos2) const;
     void moveTowardsFlag();
     void moveTowardsBase();
     void setIsCarryingFlag(bool value) { isCarryingFlag = value; }
     void exploreField();
     bool isOpponentCarryingFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     void chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
+    bool canTagEnemy(Agent* enemy) const;
+    float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     void tagEnemy(std::vector<Agent*>& otherAgents);
-    void resetFlag();
     bool isPathEmpty() const;
-    bool checkInTeamZone() const;
-    bool isOpponentCarryingFlag() const;
+    bool checkInTeamZone(const QPointF& blueFlagPos, const QPointF& redFlagPos) const;
 
 private:
     QPointF flagPos;
@@ -37,7 +37,9 @@ private:
     QPointF blueBasePos;
     QPointF redBasePos;
     QPointF currentTarget;
+    qreal movementSpeed;
     bool isTagged;
+    bool isTagging;
     bool isCarryingFlag;
     int currentPathIndex;
     int gameFieldWidth;
