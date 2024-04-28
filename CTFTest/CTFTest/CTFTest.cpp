@@ -3,15 +3,12 @@
 #include "GameManager.h"
 
 CTFTest::CTFTest(QWidget* parent)
-    : QMainWindow(parent)
-{
+    : QMainWindow(parent),
+    gameManager(new GameManager(this)) {
     ui.setupUi(this);
-
-    GameManager* gameManager = new GameManager(this);
     setCentralWidget(gameManager);
 }
 
-CTFTest::~CTFTest()
-{
+CTFTest::~CTFTest() {
     delete centralWidget();
 }

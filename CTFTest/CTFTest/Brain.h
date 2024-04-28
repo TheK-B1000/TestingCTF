@@ -9,18 +9,21 @@ enum class BrainDecision {
     Explore,
     GrabFlag,
     CaptureFlag,
-    ReturnToHomeZone
+    ReturnToHomeZone,
+    RecoverFlag,
+    TagEnemy
 };
 
 class Brain {
 public:
     Brain();
-    BrainDecision makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag);
+    BrainDecision makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging);
 
 private:
     bool flagCaptured;
     int score;
     float proximityThreshold;
+    float tagProximityThreshold;
 };
 
 #endif

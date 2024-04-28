@@ -4,10 +4,9 @@
 #include "ui_CTFTest.h"
 #include <QGraphicsView>
 
-class CTFGame;
+class GameManager;
 
-class CTFTest : public QMainWindow
-{
+class CTFTest : public QMainWindow {
     Q_OBJECT
 
 public:
@@ -16,5 +15,5 @@ public:
 
 private:
     Ui::CTFTestClass ui;
-    CTFGame* game;
+    GameManager* gameManager;
 };
