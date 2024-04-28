@@ -17,17 +17,22 @@ public:
     void runTestCase1();
     void runTestCase2(int agentCount);
     void runTestCase3();
+    void incrementBlueScore();
+    void incrementRedScore();
     void gameLoop();
     void stopGame();
     void declareWinner();
     void updateScoreDisplay();
     void updateTimeDisplay();
-    QGraphicsScene* getScene() const { return scene.get(); }
+    QGraphicsScene* getScene() const { return scene; }
+
+    static int blueScore;
+    static int redScore;
 
 private:
     std::vector<std::shared_ptr<Agent>> blueAgents;
     std::vector<std::shared_ptr<Agent>> redAgents;
-    std::unique_ptr<QGraphicsScene> scene;
+    QGraphicsScene* scene;
     QGraphicsTextItem* timeRemainingTextItem;
     QPointer<QGraphicsTextItem> blueScoreTextItem;
     QPointer<QGraphicsTextItem> redScoreTextItem;
@@ -37,7 +42,5 @@ private:
     QPointF redBasePos;
     QTimer* gameTimer;
     int timeRemaining;
-    int blueScore;
-    int redScore;
 
 };

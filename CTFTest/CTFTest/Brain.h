@@ -17,7 +17,7 @@ enum class BrainDecision {
 class Brain {
 public:
     Brain();
-    BrainDecision makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTaggign);
+    BrainDecision makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging);
 
 private:
     bool flagCaptured;

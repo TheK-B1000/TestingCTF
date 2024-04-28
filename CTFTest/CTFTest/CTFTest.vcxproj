@@ -92,6 +92,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="FlagManager.cpp" />
     <ClCompile Include="Pathfinder.cpp" />
     <QtRcc Include="CTFTest.qrc" />
     <QtUic Include="CTFTest.ui" />
@@ -105,6 +107,8 @@
   <ItemGroup>
     <ClInclude Include="Agent.h" />
     <ClInclude Include="Brain.h" />
+    <QtMoc Include="Driver.h" />
+    <ClInclude Include="FlagManager.h" />
     <ClInclude Include="GameManager.h" />
     <ClInclude Include="Pathfinder.h" />
   </ItemGroup>

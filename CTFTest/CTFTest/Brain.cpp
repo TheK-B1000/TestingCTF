@@ -1,12 +1,12 @@
 #include "Brain.h"
+#include "Agent.h"
 #include <QPointF>
 #include <cmath>
 
-Brain::Brain() : flagCaptured(false), score(0), proximityThreshold(150.0f), tagProximityThreshold(100.0f) {}
-
+Brain::Brain() : flagCaptured(false), score(0), proximityThreshold(250.0f), tagProximityThreshold(100.0f) {}
 BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging) {
     if (isTagged) {
-        flagCaptured = false;  // Reset flag captured status when tagged
+        flagCaptured = false; // Reset flag captured status when tagged
         return BrainDecision::ReturnToHomeZone;
     }
 
@@ -27,6 +27,11 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceT
             return BrainDecision::RecoverFlag;
         }
 
+        if (distanceToNearestEnemy < tagProximityThreshold) {
+            // If the nearest enemy can be tagged, make the tagging decision
+            return BrainDecision::TagEnemy;
+        }
+
         if (isTagging) {
             if (!inHomeZone || distanceToNearestEnemy > tagProximityThreshold) {
                 // Exit tagging behavior if not in home zone or enemy is too far
@@ -39,11 +44,6 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceT
         else {
             if (distanceToFlag <= proximityThreshold) {
                 return BrainDecision::GrabFlag;
-            }
-
-            if (distanceToNearestEnemy <= tagProximityThreshold && inHomeZone) {
-                // Only tag enemies if in home zone and not in enemy zone
-                return BrainDecision::TagEnemy;
             }
 
             return BrainDecision::Explore;

@@ -1,4 +1,5 @@
 #include "GameManager.h"
+#include "Agent.h"
 #include <QPainter>
 #include <QPolygon>
 #include <QRandomGenerator>
@@ -10,6 +11,9 @@
 #include <QTimer>
 #include <QRandomGenerator>
 #include <memory>
+
+int GameManager::blueScore = 0;
+int GameManager::redScore = 0;
 
 GameManager::GameManager(QWidget* parent) : QGraphicsView(parent) {
     setFixedSize(800, 600);
@@ -42,12 +46,12 @@ GameManager::GameManager(QWidget* parent) : QGraphicsView(parent) {
 
     // Create agents
     for (int i = 0; i < 4; ++i) {
-        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, scene);
+        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, scene, this);
         blueAgent->setPos(QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
         scene->addItem(blueAgent.get());
         blueAgents.push_back(blueAgent);
 
-        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, scene);
+        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, scene, this);
         redAgent->setPos(800 - QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
         scene->addItem(redAgent.get());
         redAgents.push_back(redAgent);
@@ -103,7 +107,7 @@ GameManager::GameManager(QWidget* parent) : QGraphicsView(parent) {
     // Add time remaining display
     QGraphicsTextItem* timeRemainingText = new QGraphicsTextItem();
     timeRemainingTextItem = timeRemainingText;
-    timeRemainingTextItem->setPlainText("Time Remaining: 600");
+    timeRemainingTextItem->setPlainText("Time Remaining: 2000");
     timeRemainingTextItem->setDefaultTextColor(Qt::black);
     timeRemainingTextItem->setFont(QFont("Arial", 16));
     timeRemainingTextItem->setPos(300, 10);
@@ -227,14 +231,14 @@ void GameManager::runTestCase2(int agentCount) {
 
     // Set up the new agents
     for (int i = 0; i < blueCount; ++i) {
-        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, scene);
+        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, scene, this);
         blueAgent->setPos(QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
         scene->addItem(blueAgent.get());
         blueAgents.push_back(blueAgent);
     }
 
     for (int i = 0; i < redCount; ++i) {
-        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, scene);
+        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, scene, this);
         redAgent->setPos(800 - QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
         scene->addItem(redAgent.get());
         redAgents.push_back(redAgent);
@@ -245,10 +249,10 @@ void GameManager::runTestCase2(int agentCount) {
     redScoreTextItem->setPlainText("Red Score: 0");
 
     // Add time remaining display
-    timeRemainingTextItem->setPlainText("Time Remaining: 600");
+    timeRemainingTextItem->setPlainText("Time Remaining: 2000");
 
     // Reset the game state
-    timeRemaining = 600;
+    timeRemaining = 2000;
     blueScore = 0;
     redScore = 0;
 
@@ -313,4 +317,14 @@ void GameManager::runTestCase3() {
         redFlag->setPolygon(redTriangle);
         scene->addItem(redFlag);
     }
+}
+
+void GameManager::incrementBlueScore() {
+    blueScore++;
+    updateScoreDisplay();
+}
+
+void GameManager::incrementRedScore() {
+    redScore++;
+    updateScoreDisplay();
 }
