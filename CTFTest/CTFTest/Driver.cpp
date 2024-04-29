@@ -5,8 +5,8 @@
 #include <QInputDialog>
 
 Driver::Driver(QWidget* parent) : QMainWindow(parent) {
-    gameManager = std::make_shared<GameManager>(this);
-    setCentralWidget(gameManager.get());
+    gameManager = new GameManager(this);
+    setCentralWidget(gameManager);
 
     // Create the menu bar
     QMenuBar* menuBar = new QMenuBar(this);

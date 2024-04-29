@@ -15,47 +15,55 @@
 int GameManager::blueScore = 0;
 int GameManager::redScore = 0;
 
-GameManager::GameManager(QWidget* parent) : QGraphicsView(parent) {
+GameManager::GameManager(QWidget* parent) : QGraphicsView(parent), gameFieldWidth(800), gameFieldHeight(600) {
     setFixedSize(800, 600);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    QGraphicsScene* scene = new QGraphicsScene(this);
+    scene = new QGraphicsScene(this);
     scene->setSceneRect(0, 0, 800, 600);
     setScene(scene);
 
+    setupScene();
+    setupAgents();
+
+    // Set up the score displays
+    setupScoreDisplay();
+
+    // Add time remaining display
+    setupTimeDisplay();
+
+    // Start a timer to update agents
+    int gameDuration = 2000;
+    timeRemaining = gameDuration;
+    blueScore = 0;
+    redScore = 0;
+
+    gameTimer = new QTimer(this);
+    connect(gameTimer, &QTimer::timeout, this, &GameManager::gameLoop);
+    gameTimer->start(33);
+}
+
+void GameManager::setupScene() {
     // Add team zones (circular areas around flags)
-    QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(50, 260, 80, 80);
+    blueZone = new QGraphicsEllipseItem(50, 260, 80, 80);
     QPen bluePen(Qt::blue);
     bluePen.setWidth(3);
     blueZone->setPen(bluePen);
     blueZone->setBrush(Qt::NoBrush);
     scene->addItem(blueZone);
 
-    QGraphicsEllipseItem* redZone = new QGraphicsEllipseItem(690, 260, 80, 80);
+    redZone = new QGraphicsEllipseItem(690, 260, 80, 80);
     QPen redPen(Qt::red);
     redPen.setWidth(3);
     redZone->setPen(redPen);
     redZone->setBrush(Qt::NoBrush);
     scene->addItem(redZone);
 
-    QPointF blueFlagPos = blueZone->rect().center();
-    QPointF redFlagPos = redZone->rect().center();
-    QPointF blueBasePos(50, 280);
-    QPointF redBasePos(750, 280);
-
-    // Create agents
-    for (int i = 0; i < 4; ++i) {
-        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, scene, this);
-        blueAgent->setPos(QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
-        scene->addItem(blueAgent.get());
-        blueAgents.push_back(blueAgent);
-
-        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, scene, this);
-        redAgent->setPos(800 - QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
-        scene->addItem(redAgent.get());
-        redAgents.push_back(redAgent);
-    }
+    blueFlagPos = blueZone->rect().center();
+    redFlagPos = redZone->rect().center();
+    blueBasePos = QPointF(50, 280);
+    redBasePos = QPointF(750, 280);
 
     // Add team areas fields
     QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
@@ -86,45 +94,49 @@ GameManager::GameManager(QWidget* parent) : QGraphicsView(parent) {
     redFlag->setPolygon(redTriangle);
     redFlag->setBrush(Qt::red);
     scene->addItem(redFlag);
+}
 
+void GameManager::setupAgents() {
+    // Create agents
+    for (int i = 0; i < 4; ++i) {
+        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, gameFieldWidth, gameFieldHeight, this);
+        blueAgent->setPos(QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
+        scene->addItem(blueAgent.get());
+        blueAgents.push_back(blueAgent);
+
+        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, gameFieldWidth, gameFieldHeight, this);
+        redAgent->setPos(800 - QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
+        scene->addItem(redAgent.get());
+        redAgents.push_back(redAgent);
+    }
+}
+
+void GameManager::setupScoreDisplay() {
     // Set up the score displays
-    QGraphicsTextItem* blueScoreText = new QGraphicsTextItem();
-    blueScoreTextItem = blueScoreText;
+    blueScoreTextItem = new QGraphicsTextItem();
     blueScoreTextItem->setPlainText("Blue Score: 0");
     blueScoreTextItem->setDefaultTextColor(Qt::blue);
     blueScoreTextItem->setFont(QFont("Arial", 16));
     blueScoreTextItem->setPos(10, 10);
     scene->addItem(blueScoreTextItem);
 
-    QGraphicsTextItem* redScoreText = new QGraphicsTextItem();
-    redScoreTextItem = redScoreText;
+    redScoreTextItem = new QGraphicsTextItem();
     redScoreTextItem->setPlainText("Red Score: 0");
     redScoreTextItem->setDefaultTextColor(Qt::red);
     redScoreTextItem->setFont(QFont("Arial", 16));
     redScoreTextItem->setPos(600, 10);
     scene->addItem(redScoreTextItem);
+}
 
+void GameManager::setupTimeDisplay() {
     // Add time remaining display
-    QGraphicsTextItem* timeRemainingText = new QGraphicsTextItem();
-    timeRemainingTextItem = timeRemainingText;
+    timeRemainingTextItem = new QGraphicsTextItem();
     timeRemainingTextItem->setPlainText("Time Remaining: 2000");
     timeRemainingTextItem->setDefaultTextColor(Qt::black);
     timeRemainingTextItem->setFont(QFont("Arial", 16));
     timeRemainingTextItem->setPos(300, 10);
     scene->addItem(timeRemainingTextItem);
-
-
-    // Start a timer to update agents
-    int gameDuration = 2000;
-    timeRemaining = gameDuration;
-    blueScore = 0;
-    redScore = 0;
-
-    gameTimer = new QTimer(this);
-    connect(gameTimer, &QTimer::timeout, this, &GameManager::gameLoop);
-    gameTimer->start(33);
 }
-
 void GameManager::gameLoop() {
     // Calculate the elapsed time since the last frame
     int elapsedTime = gameTimer->interval();
@@ -219,103 +231,144 @@ void GameManager::updateTimeDisplay() {
 
 void GameManager::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
+    // No changes needed, as the default setup is already handled in the constructor
 }
 
 void GameManager::runTestCase2(int agentCount) {
     // Clear the existing agents
+    for (const auto& agent : blueAgents) {
+        scene->removeItem(agent.get());
+    }
     blueAgents.clear();
+
+    for (const auto& agent : redAgents) {
+        scene->removeItem(agent.get());
+    }
     redAgents.clear();
 
+    // Calculate the number of blue and red agents
     int blueCount = agentCount / 2;
     int redCount = agentCount - blueCount;
 
     // Set up the new agents
     for (int i = 0; i < blueCount; ++i) {
-        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, scene, this);
+        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, gameFieldWidth, gameFieldHeight, this);
         blueAgent->setPos(QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
         scene->addItem(blueAgent.get());
         blueAgents.push_back(blueAgent);
     }
 
     for (int i = 0; i < redCount; ++i) {
-        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, scene, this);
+        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, gameFieldWidth, gameFieldHeight, this);
         redAgent->setPos(800 - QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
         scene->addItem(redAgent.get());
         redAgents.push_back(redAgent);
     }
 
-    // Set up the score displays
-    blueScoreTextItem->setPlainText("Blue Score: 0");
-    redScoreTextItem->setPlainText("Red Score: 0");
-
-    // Add time remaining display
-    timeRemainingTextItem->setPlainText("Time Remaining: 2000");
-
-    // Reset the game state
-    timeRemaining = 2000;
+    // Reset the scores
     blueScore = 0;
     redScore = 0;
+    updateScoreDisplay();
 
-    // Start the game loop
+    // Reset the time remaining
+    int gameDuration = 2000;
+    timeRemaining = gameDuration;
+    updateTimeDisplay();
+
+    // Stop the current game timer
+    gameTimer->stop();
+
+    // Start a new game timer
     gameTimer->start(33);
 }
+
 void GameManager::runTestCase3() {
     // Test case 3: Change the position of team zones and flags
+
+    // Remove the old flags
+    QList<QGraphicsItem*> items = scene->items();
+    for (QGraphicsItem* item : items) {
+        if (item->type() == QGraphicsPolygonItem::Type) {
+            scene->removeItem(item);
+            delete item;
+        }
+    }
+
+    // Create new flags
     QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
     QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
 
-    // Find the blue team zone
-    QGraphicsEllipseItem* blueZone = nullptr;
-    for (QGraphicsItem* item : scene->items()) {
-        if (QGraphicsEllipseItem* ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
-            QPen pen = ellipseItem->pen();
-            if (pen.color() == Qt::blue && pen.width() == 3) {
-                blueZone = ellipseItem;
-                break;
-            }
-        }
+    // Move the blue team zone to the top-left corner
+    QRectF blueZoneRect(0, 0, 100, 100);
+    blueZone->setRect(blueZoneRect);
+
+    // Move the blue flag to the center of the new team zone position
+    QPointF blueFlagPos = blueZoneRect.center();
+    QPolygon blueTriangle;
+    blueTriangle << QPoint(blueFlagPos.x() - 10, blueFlagPos.y() - 20)
+        << QPoint(blueFlagPos.x(), blueFlagPos.y())
+        << QPoint(blueFlagPos.x() + 10, blueFlagPos.y() - 20);
+    blueFlag->setPolygon(blueTriangle);
+    blueFlag->setBrush(Qt::blue);
+    scene->addItem(blueFlag);
+
+    // Move the red team zone to the bottom-right corner
+    QRectF redZoneRect(700, 500, 100, 100);
+    redZone->setRect(redZoneRect);
+
+    // Move the red flag to the center of the new team zone position
+    QPointF redFlagPos = redZoneRect.center();
+    QPolygon redTriangle;
+    redTriangle << QPoint(redFlagPos.x() - 10, redFlagPos.y() - 20)
+        << QPoint(redFlagPos.x(), redFlagPos.y())
+        << QPoint(redFlagPos.x() + 10, redFlagPos.y() - 20);
+    redFlag->setPolygon(redTriangle);
+    redFlag->setBrush(Qt::red);
+    scene->addItem(redFlag);
+
+    // Update the flag positions
+    this->blueFlagPos = blueFlagPos;
+    this->redFlagPos = redFlagPos;
+
+    // Update the base positions
+    blueBasePos = QPointF(50, 50);
+    redBasePos = QPointF(750, 550);
+
+    // Update the agent positions and paths
+    updateAgentPositions();
+    for (const auto& agent : blueAgents) {
+        agent->updatePath();
+    }
+    for (const auto& agent : redAgents) {
+        agent->updatePath();
     }
 
-    if (blueZone) {
-        // Move the blue team zone to the top-left corner
-        QRectF blueZoneRect(0, 0, 100, 100);
-        blueZone->setRect(blueZoneRect);
+    // Reset the scores
+    blueScore = 0;
+    redScore = 0;
+    updateScoreDisplay();
 
-        // Move the blue flag to the center of the new team zone position
-        QPointF blueFlagPos = blueZoneRect.center();
-        QPolygon blueTriangle;
-        blueTriangle << QPoint(blueFlagPos.x() - 10, blueFlagPos.y() - 20)
-            << QPoint(blueFlagPos.x(), blueFlagPos.y())
-            << QPoint(blueFlagPos.x() + 10, blueFlagPos.y() - 20);
-        blueFlag->setPolygon(blueTriangle);
-        scene->addItem(blueFlag);
+    // Reset the time remaining
+    int gameDuration = 2000;
+    timeRemaining = gameDuration;
+    updateTimeDisplay();
+
+    // Stop the current game timer
+    gameTimer->stop();
+
+    // Start a new game timer
+    gameTimer->start(33);
+}
+
+void GameManager::updateAgentPositions() {
+    for (const auto& agent : blueAgents) {
+        agent->setFlagPosition(redFlagPos);
+        agent->setBasePosition(blueBasePos);
     }
 
-    // Find the red team zone
-    QGraphicsEllipseItem* redZone = nullptr;
-    for (QGraphicsItem* item : scene->items()) {
-        if (QGraphicsEllipseItem* ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
-            QPen pen = ellipseItem->pen();
-            if (pen.color() == Qt::red && pen.width() == 3) {
-                redZone = ellipseItem;
-                break;
-            }
-        }
-    }
-
-    if (redZone) {
-        // Move the red team zone to the bottom-right corner
-        QRectF redZoneRect(700, 500, 100, 100);
-        redZone->setRect(redZoneRect);
-
-        // Move the red flag to the center of the new team zone position
-        QPointF redFlagPos = redZoneRect.center();
-        QPolygon redTriangle;
-        redTriangle << QPoint(redFlagPos.x() - 10, redFlagPos.y() - 20)
-            << QPoint(redFlagPos.x(), redFlagPos.y())
-            << QPoint(redFlagPos.x() + 10, redFlagPos.y() - 20);
-        redFlag->setPolygon(redTriangle);
-        scene->addItem(redFlag);
+    for (const auto& agent : redAgents) {
+        agent->setFlagPosition(blueFlagPos);
+        agent->setBasePosition(redBasePos);
     }
 }
 

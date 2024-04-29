@@ -17,5 +17,5 @@ private slots:
 
 private:
     QMenu* testCaseMenu;
-    std::shared_ptr<GameManager> gameManager;
+    GameManager* gameManager;
 };
