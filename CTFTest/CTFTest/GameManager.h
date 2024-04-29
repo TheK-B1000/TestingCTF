@@ -14,9 +14,14 @@ class GameManager : public QGraphicsView {
 public:
     GameManager(QWidget* parent = nullptr);
 
+    void setupScene();
+    void setupAgents();
+    void setupScoreDisplay();
+    void setupTimeDisplay();
     void runTestCase1();
     void runTestCase2(int agentCount);
     void runTestCase3();
+    void updateAgentPositions();
     void incrementBlueScore();
     void incrementRedScore();
     void gameLoop();
@@ -33,6 +38,8 @@ private:
     std::vector<std::shared_ptr<Agent>> blueAgents;
     std::vector<std::shared_ptr<Agent>> redAgents;
     QGraphicsScene* scene;
+    QGraphicsEllipseItem* blueZone;
+    QGraphicsEllipseItem* redZone;
     QGraphicsTextItem* timeRemainingTextItem;
     QPointer<QGraphicsTextItem> blueScoreTextItem;
     QPointer<QGraphicsTextItem> redScoreTextItem;
@@ -42,5 +49,7 @@ private:
     QPointF redBasePos;
     QTimer* gameTimer;
     int timeRemaining;
+    int gameFieldWidth;
+    int gameFieldHeight;
 
 };

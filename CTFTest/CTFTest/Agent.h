@@ -14,7 +14,7 @@ class GameManager;
 
 class Agent : public QGraphicsEllipseItem {
 public:
-    Agent(QColor color, QPointF flagPos, QPointF basePos, QGraphicsScene* scene, GameManager* gameManager);
+    Agent(const QColor& color, const QPointF& flagPos, const QPointF& basePos, int sceneWidth, int sceneHeight, GameManager* gameManager);
 
     void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, int elapsedTime);
 
@@ -25,7 +25,10 @@ public:
     void hideFlag();
     void showFlagAtStartingPosition();
     void setIsCarryingFlag(bool value) { isCarryingFlag = value; }
+    void setFlagPosition(const QPointF& position);
+    void setBasePosition(const QPointF& position);
     void exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions);
+    void updatePath();
     void chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void pickUpFlag(FlagManager* flag) { carriedFlag = flag; }
@@ -44,6 +47,8 @@ private:
     QPointF blueBasePos;
     QPointF redBasePos;
     QPointF currentTarget;
+    QPointF flagPosition;
+    QPointF basePosition;
     QColor agentColor;
     qreal movementSpeed;
     bool isTagged;

@@ -7,19 +7,19 @@
 #include <Brain.h>
 #include <QRandomGenerator>
 
-Agent::Agent(QColor color, QPointF flagPos, QPointF basePos, QGraphicsScene* scene, GameManager* gameManager)
+Agent::Agent(const QColor& color, const QPointF& flagPos, const QPointF& basePos, int sceneWidth, int sceneHeight, GameManager* gameManager)
     : QGraphicsEllipseItem(0, 0, 20, 20, nullptr),
     blueFlagPos(blueFlagPos),
     redFlagPos(redFlagPos),
     basePos(basePos),
     isCarryingFlag(false),
     currentPathIndex(0),
-    pathfinder(std::make_unique<Pathfinder>(scene->sceneRect().width(), scene->sceneRect().height())),
+    pathfinder(std::make_unique<Pathfinder>(sceneWidth, sceneHeight)),
     currentTarget(0, 0),
     brain(std::make_unique<Brain>()),
-    gameFieldWidth(scene->sceneRect().width()),
-    gameFieldHeight(scene->sceneRect().height()),
-    movementSpeed(10.0f),
+    gameFieldWidth(sceneWidth),
+    gameFieldHeight(sceneHeight),
+    movementSpeed(1000.0f),
     isTagged(false),
     isTagging(false),
     agentColor(color),
@@ -272,6 +272,77 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
     }
 }
 
+void Agent::updatePath() {
+    QPointF targetPos;
+    if (isCarryingFlag) {
+        // If carrying the flag, set the target position to the base
+        targetPos = (side == "blue") ? blueBasePos : redBasePos;
+    }
+    else {
+        // If not carrying the flag, set the target position to the enemy flag
+        targetPos = (side == "blue") ? redFlagPos : blueFlagPos;
+    }
+
+    // Check if a new path needs to be calculated
+    if (path.empty()) {
+        path = pathfinder->findPath(pos().x(), pos().y(), targetPos.x(), targetPos.y());
+        currentPathIndex = 0;
+    }
+
+    // Only proceed if there is a path
+    if (!path.empty()) {
+        // Set the next waypoint in the path as the target
+        QPointF target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
+        QPointF direction = target - pos();
+        qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
+
+        // Normalize the direction vector and move the agent towards the target
+        if (distance > 0) {
+            direction /= distance;
+            setPos(pos() + direction * std::min(distance, movementSpeed));
+        }
+
+        // Check if the agent has reached the current target or the path point
+        if (distance <= movementSpeed) {
+            currentPathIndex++; // Prepare for the next waypoint
+
+            // Check if the agent has reached the end of the path (target position)
+            if (currentPathIndex >= path.size()) {
+                // Reached the target position
+                if (isCarryingFlag) {
+                    // If carrying the flag, drop it at the base
+                    setIsCarryingFlag(false);
+                    showFlagAtStartingPosition();
+                    incrementScore();
+                }
+                else {
+                    // If not carrying the flag, grab the enemy flag
+                    setIsCarryingFlag(true);
+                    hideFlag();
+                }
+
+                // Clear the path and reset the path index
+                path.clear();
+                currentPathIndex = 0;
+            }
+        }
+    }
+    else {
+        // Edge case: If there is no path, the agent has reached the target position
+        if (isCarryingFlag) {
+            // If carrying the flag, drop it at the base
+            setIsCarryingFlag(false);
+            showFlagAtStartingPosition();
+            incrementScore();
+        }
+        else {
+            // If not carrying the flag, grab the enemy flag
+            setIsCarryingFlag(true);
+            hideFlag();
+        }
+    }
+}
+
 void Agent::tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     qreal speed = movementSpeed;
     Agent* closestEnemy = nullptr;
@@ -520,6 +591,24 @@ void Agent::showFlagAtStartingPosition() {
             item->setPos((side == "blue") ? redFlagPos : blueFlagPos); // Set the flag position based on the agent's side
             break;
         }
+    }
+}
+
+void Agent::setFlagPosition(const QPointF& position) {
+    if (side == "blue") {
+        redFlagPos = position;
+    }
+    else {
+        blueFlagPos = position;
+    }
+}
+
+void Agent::setBasePosition(const QPointF& position) {
+    if (side == "blue") {
+        blueBasePos = position;
+    }
+    else {
+        redBasePos = position;
     }
 }
 
