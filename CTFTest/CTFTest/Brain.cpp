@@ -3,7 +3,8 @@
 #include <QPointF>
 #include <cmath>
 
-Brain::Brain() : flagCaptured(false), score(0), proximityThreshold(250.0f), tagProximityThreshold(100.0f) {}
+Brain::Brain() : flagCaptured(false), score(0), proximityThreshold(250.0f), tagProximityThreshold(200.0f) {}
+
 BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging) {
     if (isTagged) {
         flagCaptured = false; // Reset flag captured status when tagged
@@ -19,34 +20,47 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceT
             return BrainDecision::CaptureFlag;
         }
         else {
-            return BrainDecision::ReturnToHomeZone;
+            if (distanceToNearestEnemy < tagProximityThreshold) {
+                // If an enemy is nearby while carrying the flag, try to avoid them
+                return BrainDecision::AvoidEnemy;
+            }
+            else {
+                return BrainDecision::ReturnToHomeZone;
+            }
         }
     }
     else {
         if (enemyHasFlag) {
-            return BrainDecision::RecoverFlag;
-        }
-
-        if (distanceToNearestEnemy < tagProximityThreshold) {
-            // If the nearest enemy can be tagged, make the tagging decision
-            return BrainDecision::TagEnemy;
-        }
-
-        if (isTagging) {
-            if (!inHomeZone || distanceToNearestEnemy > tagProximityThreshold) {
-                // Exit tagging behavior if not in home zone or enemy is too far
-                return BrainDecision::Explore;
+            if (inHomeZone) {
+                // If the enemy has the flag and the agent is in the home zone, try to tag them
+                return BrainDecision::TagEnemy;
             }
             else {
+                return BrainDecision::RecoverFlag;
+            }
+        }
+
+        if (inHomeZone) {
+            if (distanceToNearestEnemy < tagProximityThreshold) {
+                // If an enemy is nearby in the home zone, tag them
                 return BrainDecision::TagEnemy;
+            }
+            else {
+                // If no enemy is nearby in the home zone, defend the flag
+                return BrainDecision::DefendFlag;
             }
         }
         else {
-            if (distanceToFlag <= proximityThreshold) {
-                return BrainDecision::GrabFlag;
+            if (distanceToNearestEnemy < tagProximityThreshold) {
+                // If an enemy is nearby on the enemy side, avoid them
+                return BrainDecision::AvoidEnemy;
             }
-
-            return BrainDecision::Explore;
+            else {
+                if (distanceToFlag <= proximityThreshold) {
+                    return BrainDecision::GrabFlag;
+                }
+                return BrainDecision::Explore;
+            }
         }
     }
 }
