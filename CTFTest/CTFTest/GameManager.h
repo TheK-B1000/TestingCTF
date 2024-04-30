@@ -23,6 +23,7 @@ public:
     void runTestCase3();
     void updateAgentPositions();
     bool isFlagCaptured(const std::string& side) const;
+    void resetSimulation();
     void incrementBlueScore();
     void incrementRedScore();
     void gameLoop();

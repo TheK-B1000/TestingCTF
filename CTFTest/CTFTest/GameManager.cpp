@@ -131,7 +131,7 @@ void GameManager::setupScoreDisplay() {
 void GameManager::setupTimeDisplay() {
     // Add time remaining display
     timeRemainingTextItem = new QGraphicsTextItem();
-    timeRemainingTextItem->setPlainText("Time Remaining: 2000");
+    timeRemainingTextItem->setPlainText("Time Remaining: 4000");
     timeRemainingTextItem->setDefaultTextColor(Qt::black);
     timeRemainingTextItem->setFont(QFont("Arial", 16));
     timeRemainingTextItem->setPos(300, 10);
@@ -231,7 +231,8 @@ void GameManager::updateTimeDisplay() {
 
 void GameManager::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
-    // No changes needed, as the default setup is already handled in the constructor
+    // Reset the simulation to default settings
+    resetSimulation();
 }
 
 void GameManager::runTestCase2(int agentCount) {
@@ -271,7 +272,7 @@ void GameManager::runTestCase2(int agentCount) {
     updateScoreDisplay();
 
     // Reset the time remaining
-    int gameDuration = 2000;
+    int gameDuration = 4000;
     timeRemaining = gameDuration;
     updateTimeDisplay();
 
@@ -334,23 +335,28 @@ void GameManager::runTestCase3() {
     blueBasePos = QPointF(50, 50);
     redBasePos = QPointF(750, 550);
 
-    // Update the agent positions and paths
-    updateAgentPositions();
-
-    // Create a vector to store the positions of all other agents
-    std::vector<std::pair<int, int>> otherAgentsPositions;
+    // Clear the existing agents
     for (const auto& agent : blueAgents) {
-        otherAgentsPositions.emplace_back(agent->pos().x(), agent->pos().y());
+        scene->removeItem(agent.get());
     }
-    for (const auto& agent : redAgents) {
-        otherAgentsPositions.emplace_back(agent->pos().x(), agent->pos().y());
-    }
+    blueAgents.clear();
 
-    for (const auto& agent : blueAgents) {
-        agent->updatePath(otherAgentsPositions);
-    }
     for (const auto& agent : redAgents) {
-        agent->updatePath(otherAgentsPositions);
+        scene->removeItem(agent.get());
+    }
+    redAgents.clear();
+
+    // Create new agents with the updated flag and base positions
+    for (int i = 0; i < 4; ++i) {
+        auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, gameFieldWidth, gameFieldHeight, this);
+        blueAgent->setPos(QRandomGenerator::global()->bounded(50), QRandomGenerator::global()->bounded(50));
+        scene->addItem(blueAgent.get());
+        blueAgents.push_back(blueAgent);
+
+        auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, gameFieldWidth, gameFieldHeight, this);
+        redAgent->setPos(750 - QRandomGenerator::global()->bounded(50), 550 - QRandomGenerator::global()->bounded(50));
+        scene->addItem(redAgent.get());
+        redAgents.push_back(redAgent);
     }
 
     // Reset the scores
@@ -359,7 +365,7 @@ void GameManager::runTestCase3() {
     updateScoreDisplay();
 
     // Reset the time remaining
-    int gameDuration = 2000;
+    int gameDuration = 4000;
     timeRemaining = gameDuration;
     updateTimeDisplay();
 
@@ -398,6 +404,77 @@ bool GameManager::isFlagCaptured(const std::string& side) const {
         }
     }
     return false;
+}
+
+void GameManager::resetSimulation() {
+    // Clear the existing agents
+    for (const auto& agent : blueAgents) {
+        scene->removeItem(agent.get());
+    }
+    blueAgents.clear();
+
+    for (const auto& agent : redAgents) {
+        scene->removeItem(agent.get());
+    }
+    redAgents.clear();
+
+    // Reset the team zones and flags to their default positions
+    blueZone->setRect(50, 260, 80, 80);
+    redZone->setRect(690, 260, 80, 80);
+
+    blueFlagPos = blueZone->rect().center();
+    redFlagPos = redZone->rect().center();
+    blueBasePos = QPointF(50, 280);
+    redBasePos = QPointF(750, 280);
+
+    // Remove the old flags
+    QList<QGraphicsItem*> items = scene->items();
+    for (QGraphicsItem* item : items) {
+        if (item->type() == QGraphicsPolygonItem::Type) {
+            scene->removeItem(item);
+            delete item;
+        }
+    }
+
+    // Create new flags
+    QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
+    QPolygon blueTriangle;
+    qreal blueFlagCenter = blueZone->rect().center().y();
+    blueTriangle << QPoint(blueFlagPos.x() - 10, blueFlagCenter - 20)
+        << QPoint(blueFlagPos.x(), blueFlagCenter)
+        << QPoint(blueFlagPos.x() + 10, blueFlagCenter - 20);
+    blueFlag->setPolygon(blueTriangle);
+    blueFlag->setBrush(Qt::blue);
+    scene->addItem(blueFlag);
+
+    QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
+    QPolygon redTriangle;
+    qreal redFlagCenter = redZone->rect().center().y();
+    redTriangle << QPoint(redFlagPos.x() - 10, redFlagCenter - 20)
+        << QPoint(redFlagPos.x(), redFlagCenter)
+        << QPoint(redFlagPos.x() + 10, redFlagCenter - 20);
+    redFlag->setPolygon(redTriangle);
+    redFlag->setBrush(Qt::red);
+    scene->addItem(redFlag);
+
+    // Set up the default agents
+    setupAgents();
+
+    // Reset the scores
+    blueScore = 0;
+    redScore = 0;
+    updateScoreDisplay();
+
+    // Reset the time remaining
+    int gameDuration = 2000;
+    timeRemaining = gameDuration;
+    updateTimeDisplay();
+
+    // Stop the current game timer
+    gameTimer->stop();
+
+    // Start a new game timer
+    gameTimer->start(16);
 }
 
 void GameManager::incrementBlueScore() {
