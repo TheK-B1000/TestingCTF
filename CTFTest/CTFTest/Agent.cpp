@@ -50,7 +50,17 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     float distanceToEnemy = distanceToNearestEnemy(otherAgentsPositions);
     bool enemyHasFlag = isOpponentCarryingFlag(otherAgentsPositions);
 
-    BrainDecision decision = brain->makeDecision(isCarryingFlag, checkInTeamZone(this->blueFlagPos, this->redFlagPos), distanceToFlag, isTagged, enemyHasFlag, distanceToEnemy, isTagging);
+    // Check if the agent is in the middle of the field
+    bool isInMiddle = isInMiddleOfField();
+    if (isInMiddle) {
+        middleStuckTime += elapsedTime;
+    }
+    else {
+        middleStuckTime = 0;
+    }
+    bool isStuckInMiddle = middleStuckTime > 5000; // Adjust the threshold value as needed
+
+    BrainDecision decision = brain->makeDecision(isCarryingFlag, checkInTeamZone(this->blueFlagPos, this->redFlagPos), distanceToFlag, isTagged, enemyHasFlag, distanceToEnemy, isTagging, isStuckInMiddle);
 
     if (isTagged) {
         // Change the agent's color to pink
@@ -72,6 +82,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     if (!isCarryingFlag && !isTagged && (distanceToFlag <= 250.0f || distanceToEnemy > 100.0f)) {
         decision = BrainDecision::GrabFlag;
     }
+
     switch (decision) {
     case BrainDecision::Explore:
         qDebug() << "Exploring field";
@@ -124,7 +135,8 @@ void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsP
     QPointF targetFlagPos = (side == "blue") ? redFlagPos : blueFlagPos;
 
     if (path.empty()) {
-        path = pathfinder->findPath(pos().x(), pos().y(), targetFlagPos.x(), targetFlagPos.y(), otherAgentsPositions);
+        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+        path = pathfinder->findPath(pos().x(), pos().y(), targetFlagPos.x(), targetFlagPos.y(), otherAgentsPositions, agentPositions);
         currentPathIndex = 0;
     }
 
@@ -164,7 +176,8 @@ void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsP
                     // The agent is not within the flag zone, continue moving towards the flag
                     path.clear();
                     currentPathIndex = 0;
-                    path = pathfinder->findPath(pos().x(), pos().y(), targetFlagPos.x(), targetFlagPos.y(), otherAgentsPositions);
+                    std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                    path = pathfinder->findPath(pos().x(), pos().y(), targetFlagPos.x(), targetFlagPos.y(), otherAgentsPositions, agentPositions);
                 }
 
                 path.clear(); // Clear path data
@@ -190,7 +203,8 @@ void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsP
                 // The agent is not within the flag zone, continue moving towards the flag
                 path.clear();
                 currentPathIndex = 0;
-                path = pathfinder->findPath(pos().x(), pos().y(), targetFlagPos.x(), targetFlagPos.y(), otherAgentsPositions);
+                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                path = pathfinder->findPath(pos().x(), pos().y(), targetFlagPos.x(), targetFlagPos.y(), otherAgentsPositions, agentPositions);
             }
         }
 
@@ -206,8 +220,8 @@ void Agent::moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsP
 
     // Check if a new path needs to be calculated
     if (path.empty()) {
-        path = pathfinder->findPath(pos().x(), pos().y(), targetBasePos.x(), targetBasePos.y(), otherAgentsPositions);
-
+        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+        path = pathfinder->findPath(pos().x(), pos().y(), targetBasePos.x(), targetBasePos.y(), otherAgentsPositions, agentPositions);
         currentPathIndex = 0;
     }
 
@@ -245,7 +259,6 @@ void Agent::moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsP
     }
 }
 
-
 void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     qreal speed = movementSpeed;
 
@@ -258,7 +271,8 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
 
     // Check if a new path needs to be calculated
     if (path.empty()) {
-        path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions);
+        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+        path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
         currentPathIndex = 0;
     }
 
@@ -302,6 +316,18 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
     }
 }
 
+std::vector<std::pair<int, int>> Agent::getOtherAgentPositions(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
+    std::vector<std::pair<int, int>> agentPositions;
+
+    for (const auto& pos : otherAgentsPositions) {
+        if (pos != std::make_pair(static_cast<int>(this->pos().x()), static_cast<int>(this->pos().y()))) {
+            agentPositions.push_back(pos);
+        }
+    }
+
+    return agentPositions;
+}
+
 void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     QPointF targetPos;
     if (isCarryingFlag) {
@@ -315,7 +341,8 @@ void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositi
 
     // Check if a new path needs to be calculated
     if (path.empty()) {
-        path = pathfinder->findPath(pos().x(), pos().y(), targetPos.x(), targetPos.y(), otherAgentsPositions);
+        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+        path = pathfinder->findPath(pos().x(), pos().y(), targetPos.x(), targetPos.y(), otherAgentsPositions, agentPositions);
         currentPathIndex = 0;
     }
 
@@ -397,7 +424,8 @@ void Agent::tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pa
             isTagging = true; // Set isTagging to true when starting to tag an enemy
 
             if (path.empty()) {
-                path = pathfinder->findPath(pos().x(), pos().y(), closestEnemy->pos().x(), closestEnemy->pos().y(), otherAgentsPositions);
+                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                path = pathfinder->findPath(pos().x(), pos().y(), closestEnemy->pos().x(), closestEnemy->pos().y(), otherAgentsPositions, agentPositions);
                 currentPathIndex = 0;
             }
 
@@ -492,7 +520,8 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     // If an opponent with the flag is found, move towards them
     if (opponentFound) {
         if (path.empty()) {
-            path = pathfinder->findPath(pos().x(), pos().y(), opponentWithFlagPos.first, opponentWithFlagPos.second, otherAgentsPositions);
+            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+            path = pathfinder->findPath(pos().x(), pos().y(), opponentWithFlagPos.first, opponentWithFlagPos.second, otherAgentsPositions, agentPositions);
             currentPathIndex = 0;
         }
 
@@ -680,13 +709,17 @@ void Agent::avoidEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::
             // If the flag is nearby and no enemy is close, go after the flag
             path.clear();
             currentPathIndex = 0;
-            moveTowardsFlag(otherAgentsPositions);
+            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+            path = pathfinder->findPath(pos().x(), pos().y(), flagPos.x(), flagPos.y(), otherAgentsPositions, agentPositions);
         }
         else {
             // If no enemy is close and the flag is not nearby, explore
             path.clear();
             currentPathIndex = 0;
-            exploreField(otherAgentsPositions);
+            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+            QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
+                QRandomGenerator::global()->bounded(0, gameFieldHeight));
+            path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
         }
     }
 }
@@ -715,7 +748,8 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
             isTagging = true; // Set isTagging to true when starting to tag an enemy
 
             if (path.empty()) {
-                path = pathfinder->findPath(pos().x(), pos().y(), closestEnemy->pos().x(), closestEnemy->pos().y(), otherAgentsPositions);
+                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                path = pathfinder->findPath(pos().x(), pos().y(), closestEnemy->pos().x(), closestEnemy->pos().y(), otherAgentsPositions, agentPositions);
                 currentPathIndex = 0;
             }
 
@@ -753,7 +787,10 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
                             // Reached the end of the path, generate a new exploration target
                             path.clear();
                             currentPathIndex = 0;
-                            exploreField(otherAgentsPositions);
+                            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                            QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
+                                QRandomGenerator::global()->bounded(0, gameFieldHeight));
+                            path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
                         }
                         isTagging = false; // Set isTagging to false when the tagging behavior is completed
                     }
@@ -772,7 +809,10 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
                     // Reached the end of the path, generate a new exploration target
                     path.clear();
                     currentPathIndex = 0;
-                    exploreField(otherAgentsPositions);
+                    std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                    QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
+                        QRandomGenerator::global()->bounded(0, gameFieldHeight));
+                    path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
                 }
                 isTagging = false; // Set isTagging to false when the tagging behavior is completed
             }
@@ -785,13 +825,27 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
         if (distanceToNearestEnemy(otherAgentsPositions) > tagProximityThreshold) {
             // If no enemies are nearby, either explore the field or move towards the enemy flag
             if (QRandomGenerator::global()->generateDouble() < 0.5) {
-                exploreField(otherAgentsPositions);
+                path.clear();
+                currentPathIndex = 0;
+                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
+                    QRandomGenerator::global()->bounded(0, gameFieldHeight));
+                path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
             }
             else {
-                moveTowardsFlag(otherAgentsPositions);
+                path.clear();
+                currentPathIndex = 0;
+                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                path = pathfinder->findPath(pos().x(), pos().y(), flagPos.x(), flagPos.y(), otherAgentsPositions, agentPositions);
             }
         }
     }
+}
+
+bool Agent::isInMiddleOfField() const {
+    QPointF fieldCenter(gameFieldWidth / 2, gameFieldHeight / 2);
+    float distanceToCenter = calculateDistance(pos(), fieldCenter);
+    return distanceToCenter < 100.0f;
 }
 
 void Agent::setFlagPosition(const QPointF& position) {
