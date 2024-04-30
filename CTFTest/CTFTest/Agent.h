@@ -32,6 +32,7 @@ public:
     void setFlagPosition(const QPointF& position);
     void setBasePosition(const QPointF& position);
     void exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions);
+    std::vector<std::pair<int, int>> getOtherAgentPositions(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
@@ -43,6 +44,7 @@ public:
     bool checkInTeamZone(const QPointF& blueFlagPos, const QPointF& redFlagPos) const;
     bool isOpponentCarryingFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     bool getIsCarryingFlag() const;
+    bool isInMiddleOfField() const;
 
 private:
     QPointF flagPos;
@@ -64,6 +66,7 @@ private:
     int currentPathIndex;
     int gameFieldWidth;
     int gameFieldHeight;
+    int middleStuckTime;
     std::unique_ptr<Pathfinder> pathfinder;
     std::unique_ptr<Brain> brain;
     std::vector<std::pair<int, int>> path;

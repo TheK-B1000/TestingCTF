@@ -279,7 +279,7 @@ void GameManager::runTestCase2(int agentCount) {
     gameTimer->stop();
 
     // Start a new game timer
-    gameTimer->start(33);
+    gameTimer->start(16);
 }
 
 void GameManager::runTestCase3() {

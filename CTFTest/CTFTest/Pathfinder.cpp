@@ -10,13 +10,9 @@
 Pathfinder::Pathfinder(int gameFieldWidth, int gameFieldHeight)
     : gameFieldWidth(gameFieldWidth), gameFieldHeight(gameFieldHeight) {}
 
-double Pathfinder::calculateHeuristic(int x1, int y1, int x2, int y2) {
-    int dx = std::abs(x1 - x2);
-    int dy = std::abs(y1 - y2);
-    return dx + dy;
-}
-
-std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, int goalX, int goalY, const std::vector<std::pair<int, int>>& enemyPositions) {
+std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, int goalX, int goalY,
+    const std::vector<std::pair<int, int>>& enemyPositions,
+    const std::vector<std::pair<int, int>>& agentPositions) {
     struct NodeComparator {
         bool operator()(const std::tuple<double, double, std::pair<int, int>>& a,
             const std::tuple<double, double, std::pair<int, int>>& b) {
@@ -62,12 +58,12 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
 
         closedSet.insert(current);
 
-        for (const auto& neighbor : getNeighbors(current.first, current.second, enemyPositions)) {
+        for (const auto& neighbor : getNeighbors(current.first, current.second, enemyPositions, agentPositions)) {
             if (closedSet.count(neighbor) > 0) {
                 continue;
             }
 
-            double tentativeGScore = currentGScore + getCost(current, neighbor, enemyPositions);
+            double tentativeGScore = currentGScore + getCost(current, neighbor, enemyPositions, agentPositions);
             if (gScore.count(neighbor) == 0 || tentativeGScore < gScore[neighbor]) {
                 cameFrom[neighbor] = current;
                 gScore[neighbor] = tentativeGScore;
@@ -81,7 +77,9 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
     return std::vector<std::pair<int, int>>();
 }
 
-std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y, const std::vector<std::pair<int, int>>& enemyPositions) {
+std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y,
+    const std::vector<std::pair<int, int>>& enemyPositions,
+    const std::vector<std::pair<int, int>>& agentPositions) {
     std::vector<std::pair<int, int>> neighbors;
     const int dx[] = { -1, 0, 1, 0 };
     const int dy[] = { 0, -1, 0, 1 };
@@ -89,7 +87,7 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y, const st
     for (int i = 0; i < 4; ++i) {
         int newX = x + dx[i];
         int newY = y + dy[i];
-        if (isValidPosition(newX, newY) && !isEnemyPosition(newX, newY, enemyPositions)) {
+        if (isValidPosition(newX, newY) && !isEnemyPosition(newX, newY, enemyPositions) && !isAgentPosition(newX, newY, agentPositions)) {
             neighbors.push_back({ newX, newY });
         }
     }
@@ -105,12 +103,23 @@ bool Pathfinder::isEnemyPosition(int x, int y, const std::vector<std::pair<int, 
     return std::find(enemyPositions.begin(), enemyPositions.end(), std::make_pair(x, y)) != enemyPositions.end();
 }
 
-double Pathfinder::getCost(const std::pair<int, int>& current, const std::pair<int, int>& neighbor, const std::vector<std::pair<int, int>>& enemyPositions) {
+bool Pathfinder::isAgentPosition(int x, int y, const std::vector<std::pair<int, int>>& agentPositions) {
+    return std::find(agentPositions.begin(), agentPositions.end(), std::make_pair(x, y)) != agentPositions.end();
+}
+
+double Pathfinder::getCost(const std::pair<int, int>& current, const std::pair<int, int>& neighbor,
+    const std::vector<std::pair<int, int>>& enemyPositions,
+    const std::vector<std::pair<int, int>>& agentPositions) {
     double baseCost = 1.0;
     double enemyCost = 10.0;
+    double agentCost = 5.0;
 
     if (isEnemyPosition(neighbor.first, neighbor.second, enemyPositions)) {
         return baseCost + enemyCost;
+    }
+
+    if (isAgentPosition(neighbor.first, neighbor.second, agentPositions)) {
+        return baseCost + agentCost;
     }
 
     return baseCost;
