@@ -19,7 +19,7 @@ Agent::Agent(const QColor& color, const QPointF& flagPos, const QPointF& basePos
     brain(std::make_unique<Brain>()),
     gameFieldWidth(sceneWidth),
     gameFieldHeight(sceneHeight),
-    movementSpeed(1000.0f),
+    movementSpeed(2000.0f),
     isTagged(false),
     isTagging(false),
     agentColor(color),
