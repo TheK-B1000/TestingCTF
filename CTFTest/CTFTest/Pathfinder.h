@@ -17,7 +17,8 @@ struct pair_hash {
 class Pathfinder {
 public:
     Pathfinder(int gameFieldWidth, int gameFieldHeight);
-    std::vector<std::pair<int, int>> findPath(int startX, int startY, int goalX, int goalY);
+
+    std::vector<std::pair<int, int>> findPath(int startX, int startY, int goalX, int goalY, const std::vector<std::pair<int, int>>& enemyPositions);
 
 private:
     int gameFieldWidth;
@@ -25,8 +26,10 @@ private:
     std::vector<std::pair<int, int>> dynamicObstacles;
 
     double calculateHeuristic(int x1, int y1, int x2, int y2);
-    std::vector<std::pair<int, int>> getNeighbors(int x, int y);
+    std::vector<std::pair<int, int>> getNeighbors(int x, int y, const std::vector<std::pair<int, int>>& enemyPositions);
     bool isValidPosition(int x, int y);
+    bool isEnemyPosition(int x, int y, const std::vector<std::pair<int, int>>& enemyPositions);
+    double getCost(const std::pair<int, int>& current, const std::pair<int, int>& neighbor, const std::vector<std::pair<int, int>>& enemyPositions);
 };
 
-#endif 
+#endif

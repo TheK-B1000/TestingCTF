@@ -20,15 +20,19 @@ public:
 
     float calculateDistance(const QPointF& pos1, const QPointF& pos2) const;
     float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
-    void moveTowardsFlag();
-    void moveTowardsBase();
+    float proximityThreshold;
+    float tagProximityThreshold;
+    void moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
+    void moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void hideFlag();
     void showFlagAtStartingPosition();
+    void avoidEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
+    void defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void setIsCarryingFlag(bool value) { isCarryingFlag = value; }
     void setFlagPosition(const QPointF& position);
     void setBasePosition(const QPointF& position);
     void exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    void updatePath();
+    void updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void pickUpFlag(FlagManager* flag) { carriedFlag = flag; }
@@ -38,6 +42,7 @@ public:
     bool isPathEmpty() const;
     bool checkInTeamZone(const QPointF& blueFlagPos, const QPointF& redFlagPos) const;
     bool isOpponentCarryingFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
+    bool getIsCarryingFlag() const;
 
 private:
     QPointF flagPos;
@@ -51,6 +56,8 @@ private:
     QPointF basePosition;
     QColor agentColor;
     qreal movementSpeed;
+    qint64 lastTagTime;
+    const qint64 tagCooldownPeriod = 30000; // 30 seconds
     bool isTagged;
     bool isTagging;
     bool isCarryingFlag;

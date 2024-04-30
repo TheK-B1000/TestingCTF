@@ -34,14 +34,14 @@ GameManager::GameManager(QWidget* parent) : QGraphicsView(parent), gameFieldWidt
     setupTimeDisplay();
 
     // Start a timer to update agents
-    int gameDuration = 2000;
+    int gameDuration = 4000;
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
 
     gameTimer = new QTimer(this);
     connect(gameTimer, &QTimer::timeout, this, &GameManager::gameLoop);
-    gameTimer->start(33);
+    gameTimer->start(16);
 }
 
 void GameManager::setupScene() {
@@ -336,11 +336,21 @@ void GameManager::runTestCase3() {
 
     // Update the agent positions and paths
     updateAgentPositions();
+
+    // Create a vector to store the positions of all other agents
+    std::vector<std::pair<int, int>> otherAgentsPositions;
     for (const auto& agent : blueAgents) {
-        agent->updatePath();
+        otherAgentsPositions.emplace_back(agent->pos().x(), agent->pos().y());
     }
     for (const auto& agent : redAgents) {
-        agent->updatePath();
+        otherAgentsPositions.emplace_back(agent->pos().x(), agent->pos().y());
+    }
+
+    for (const auto& agent : blueAgents) {
+        agent->updatePath(otherAgentsPositions);
+    }
+    for (const auto& agent : redAgents) {
+        agent->updatePath(otherAgentsPositions);
     }
 
     // Reset the scores
@@ -357,7 +367,7 @@ void GameManager::runTestCase3() {
     gameTimer->stop();
 
     // Start a new game timer
-    gameTimer->start(33);
+    gameTimer->start(16);
 }
 
 void GameManager::updateAgentPositions() {
@@ -370,6 +380,24 @@ void GameManager::updateAgentPositions() {
         agent->setFlagPosition(blueFlagPos);
         agent->setBasePosition(redBasePos);
     }
+}
+
+bool GameManager::isFlagCaptured(const std::string& side) const {
+    if (side == "blue") {
+        for (const auto& agent : redAgents) {
+            if (agent->getIsCarryingFlag()) {
+                return true;
+            }
+        }
+    }
+    else if (side == "red") {
+        for (const auto& agent : blueAgents) {
+            if (agent->getIsCarryingFlag()) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void GameManager::incrementBlueScore() {
