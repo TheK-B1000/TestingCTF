@@ -596,42 +596,6 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
     return minDistance;
 }
 
-bool Agent::isPathEmpty() const {
-    return path.empty();
-}
-
-bool Agent::checkInTeamZone(const QPointF& blueFlagPos, const QPointF& redFlagPos) const {
-    QPointF agentPos(pos().x(), pos().y());
-    float zoneRadius = 40.0f; // Radius of the team zones (adjust as needed)
-
-    if (side == "blue") {
-        // Blue team's zone is a circular area around the blue flag
-        float distanceToBlueZone = calculateDistance(agentPos, blueFlagPos);
-        return distanceToBlueZone <= zoneRadius;
-    }
-    else {
-        // Red team's zone is a circular area around the red flag
-        float distanceToRedZone = calculateDistance(agentPos, redFlagPos);
-        return distanceToRedZone <= zoneRadius;
-    }
-}
-
-bool Agent::isOpponentCarryingFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
-    // Check if an opponent is carrying the flag based on the agent's side
-    for (const auto& pos : otherAgentsPositions) {
-        if (side == "blue" && qFuzzyCompare(static_cast<double>(pos.first), redFlagPos.x()) &&
-            qFuzzyCompare(static_cast<double>(pos.second), redFlagPos.y())) {
-            return true;
-        }
-        else if (side == "red" && qFuzzyCompare(static_cast<double>(pos.first), blueFlagPos.x()) &&
-            qFuzzyCompare(static_cast<double>(pos.second), blueFlagPos.y())) {
-            return true;
-        }
-    }
-    return false;
-}
-
-
 void Agent::avoidEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     qreal speed = movementSpeed;
     Agent* closestEnemy = nullptr;
@@ -665,27 +629,26 @@ void Agent::avoidEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::
     }
 
     // Move the agent away from the enemy
-    setPos(pos() + awayDirection * std::min(distance, speed));
+    QPointF newPosition = pos() + awayDirection * std::min(distance, speed);
+    setPos(newPosition);
 
     // Check if it's safe to explore or go after the flag
-    float distanceToFlag = calculateDistance(pos(), flagPos);
+    float distanceToFlag = calculateDistance(newPosition, flagPos);
     float distanceToEnemy = distanceToNearestEnemy(otherAgentsPositions);
     if (distanceToEnemy > tagProximityThreshold) {
         if (distanceToFlag <= proximityThreshold) {
             // If the flag is nearby and no enemy is close, go after the flag
             path.clear();
             currentPathIndex = 0;
-            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-            path = pathfinder->findPath(pos().x(), pos().y(), flagPos.x(), flagPos.y(), otherAgentsPositions, agentPositions);
+            moveTowardsFlag(otherAgentsPositions);
+            return;
         }
         else {
             // If no enemy is close and the flag is not nearby, explore
             path.clear();
             currentPathIndex = 0;
-            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-            QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
-                QRandomGenerator::global()->bounded(0, gameFieldHeight));
-            path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
+            exploreField(otherAgentsPositions);
+            return;
         }
     }
 }
@@ -819,6 +782,42 @@ std::vector<std::pair<int, int>> Agent::getOtherAgentPositions(const std::vector
 
     return agentPositions;
 }
+
+bool Agent::isPathEmpty() const {
+    return path.empty();
+}
+
+bool Agent::checkInTeamZone(const QPointF& blueFlagPos, const QPointF& redFlagPos) const {
+    QPointF agentPos(pos().x(), pos().y());
+    float zoneRadius = 40.0f; // Radius of the team zones (adjust as needed)
+
+    if (side == "blue") {
+        // Blue team's zone is a circular area around the blue flag
+        float distanceToBlueZone = calculateDistance(agentPos, blueFlagPos);
+        return distanceToBlueZone <= zoneRadius;
+    }
+    else {
+        // Red team's zone is a circular area around the red flag
+        float distanceToRedZone = calculateDistance(agentPos, redFlagPos);
+        return distanceToRedZone <= zoneRadius;
+    }
+}
+
+bool Agent::isOpponentCarryingFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
+    // Check if an opponent is carrying the flag based on the agent's side
+    for (const auto& pos : otherAgentsPositions) {
+        if (side == "blue" && qFuzzyCompare(static_cast<double>(pos.first), redFlagPos.x()) &&
+            qFuzzyCompare(static_cast<double>(pos.second), redFlagPos.y())) {
+            return true;
+        }
+        else if (side == "red" && qFuzzyCompare(static_cast<double>(pos.first), blueFlagPos.x()) &&
+            qFuzzyCompare(static_cast<double>(pos.second), blueFlagPos.y())) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 bool Agent::isInMiddleOfField() const {
     QPointF fieldCenter(gameFieldWidth / 2, gameFieldHeight / 2);
