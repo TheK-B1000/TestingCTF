@@ -87,7 +87,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     switch (decision) {
     case BrainDecision::Explore:
         qDebug() << "Exploring field";
-        exploreField(otherAgentsPositions);
+        exploreField(otherAgentsPositions, otherAgents);
         break;
     case BrainDecision::GrabFlag:
         qDebug() << "Moving towards enemy flag";
@@ -95,31 +95,31 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         break;
     case BrainDecision::CaptureFlag:
         qDebug() << "Moving towards home zone";
-        moveTowardsBase(otherAgentsPositions);
+        moveTowardsBase(otherAgentsPositions, otherAgents);
         break;
     case BrainDecision::AvoidEnemy:
         qDebug() << "Avoiding enemy";
-        exploreField(otherAgentsPositions);
+        exploreField(otherAgentsPositions, otherAgents);
         break;
     case BrainDecision::RecoverFlag:
         qDebug() << "Chasing opponent with flag";
-        chaseOpponentWithFlag(otherAgentsPositions);
+        moveTowardsBase(otherAgentsPositions, otherAgents);
         break;
     case BrainDecision::DefendFlag:
         qDebug() << "Defending flag";
-        defendFlag(otherAgents, otherAgentsPositions);
+        exploreField(otherAgentsPositions, otherAgents);
         break;
     case BrainDecision::TagEnemy:
         qDebug() << "Tagging enemy";
-        tagEnemy(otherAgents, otherAgentsPositions);
+        exploreField(otherAgentsPositions, otherAgents);
         break;
     case BrainDecision::ReturnToHomeZone:
         qDebug() << "Returning to home zone";
-        moveTowardsBase(otherAgentsPositions);
+        moveTowardsBase(otherAgentsPositions, otherAgents);
         break;
     default:
         qDebug() << "Exploring field";
-        exploreField(otherAgentsPositions);
+        exploreField(otherAgentsPositions, otherAgents);
         break;
     }
 }
@@ -130,258 +130,8 @@ float Agent::calculateDistance(const QPointF& pos1, const QPointF& pos2) const {
 }
 
 
-void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
+void Agent::moveTowardsTarget(const QPointF& targetPos, const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     qreal speed = movementSpeed;
-
-    QPointF targetFlagPos = (side == "blue") ? redFlagPos : blueFlagPos;
-
-    if (path.empty()) {
-        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-        path = pathfinder->findPath(pos().x(), pos().y(), targetFlagPos.x(), targetFlagPos.y(), otherAgentsPositions, agentPositions);
-        currentPathIndex = 0;
-    }
-
-    QPointF target;
-    if (currentPathIndex < path.size()) {
-        target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
-    }
-    else {
-        target = targetFlagPos;
-    }
-
-    QPointF direction = target - pos();
-    qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
-
-    if (distance > 0) {
-        direction /= distance; // Normalize the direction vector
-
-        // Move the agent towards the target
-        setPos(pos() + direction * std::min(distance, speed));
-
-        // Check if the agent has reached the target or a path point
-        if (distance <= speed) {
-            if (currentPathIndex < path.size() - 1) {
-                currentPathIndex++; // Set the next point as the current target for the next update
-            }
-            else {
-                path.clear(); // Clear path data
-                currentPathIndex = 0; // Reset path index
-            }
-        }
-    }
-    else {
-        // The agent has reached the flag or the next point in the path
-        if (currentPathIndex < path.size() - 1) {
-            currentPathIndex++; // Set the next point as the current target for the next update
-        }
-    }
-
-    // Check if the agent has reached the coordinates of the enemy team base
-    if (pos() == targetFlagPos) {
-        setIsCarryingFlag(true); // The agent reaches the flag and captures it
-        hideFlag(); // Hide the flag when the agent picks it up
-        setPen(QPen(Qt::yellow, 2)); // Set the agent's outline color to gold
-    }
-}
-
-void Agent::moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    qreal speed = movementSpeed;
-    QPointF targetBasePos = (side == "blue") ? blueBasePos : redBasePos;
-
-    // Check if a new path needs to be calculated
-    if (path.empty()) {
-        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-
-        if (!isTagged) {
-            // If the agent is not tagged, avoid enemies while moving towards the base
-            QPointF awayDirection;
-            float distanceToEnemy = distanceToNearestEnemy(otherAgentsPositions);
-            if (distanceToEnemy <= tagProximityThreshold) {
-                // If an enemy is nearby, calculate a direction away from the nearest enemy
-                for (const auto& enemyPos : otherAgentsPositions) {
-                    if (side != "blue" && enemyPos.first < gameFieldWidth / 2) {
-                        // Enemy position is on the blue side
-                        QPointF enemyPosition(enemyPos.first, enemyPos.second);
-                        float distance = calculateDistance(pos(), enemyPosition);
-                        if (distance < distanceToEnemy) {
-                            awayDirection = pos() - enemyPosition;
-                            distanceToEnemy = distance;
-                        }
-                    }
-                    else if (side != "red" && enemyPos.first >= gameFieldWidth / 2) {
-                        // Enemy position is on the red side
-                        QPointF enemyPosition(enemyPos.first, enemyPos.second);
-                        float distance = calculateDistance(pos(), enemyPosition);
-                        if (distance < distanceToEnemy) {
-                            awayDirection = pos() - enemyPosition;
-                            distanceToEnemy = distance;
-                        }
-                    }
-                }
-
-                qreal distance = std::sqrt(awayDirection.x() * awayDirection.x() + awayDirection.y() * awayDirection.y());
-                if (distance > 0) {
-                    awayDirection /= distance;
-                }
-                const float avoidanceDistance = 150.0f; // Define a constant for the avoidance distance
-                targetBasePos = pos() + awayDirection * avoidanceDistance;
-            }
-        }
-        path = pathfinder->findPath(pos().x(), pos().y(), targetBasePos.x(), targetBasePos.y(), otherAgentsPositions, agentPositions);
-        currentPathIndex = 0;
-    }
-
-    // Only proceed if there is a path
-    if (!path.empty()) {
-        // Set the next waypoint in the path as the target
-        QPointF target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
-        QPointF direction = target - pos();
-        qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
-
-        // Normalize the direction vector and move the agent towards the target
-        if (distance > 0) {
-            direction /= distance;
-            setPos(pos() + direction * std::min(distance, speed));
-        }
-
-        // Check if the agent has reached the current target or the path point
-        if (distance <= speed) {
-            currentPathIndex++; // Prepare for the next waypoint
-
-            // Check if the agent has reached the end of the path (base position)
-            if (currentPathIndex >= path.size()) {
-                if (isTagged || checkInTeamZone(this->blueFlagPos, this->redFlagPos)) {
-                    // If the agent is tagged or in its team zone, reset the tagged status
-                    isTagged = false;
-                }
-
-                if (isCarryingFlag && !isTagged) {
-                    setIsCarryingFlag(false); // The agent reaches the base and drops the flag
-                    showFlagAtStartingPosition(); // Show the flag at its starting position
-                    incrementScore(); // Increment the score for the agent's team
-                }
-                else {
-                    setIsCarryingFlag(false); // The agent reaches the base but is tagged, so it drops the flag without scoring
-                }
-
-                setPen(QPen(agentColor, 2)); // Restore the agent's original outline color
-                path.clear(); // Clear the path
-                currentPathIndex = 0; // Reset the path index
-
-                // Determine the next action for the agent
-                if (isTagged) {
-                    // If the agent is tagged, explore the field
-                    exploreField(otherAgentsPositions);
-                }
-                else {
-                    if (QRandomGenerator::global()->generateDouble() < 0.5) {
-                        // 50% chance to explore the field
-                        exploreField(otherAgentsPositions);
-                    }
-                    else {
-                        // 50% chance to move towards the flag
-                        moveTowardsFlag(otherAgentsPositions);
-                    }
-                }
-            }
-        }
-    }
-    else {
-        // Edge case: If the distance is zero (agent is already at the base), drop the flag and reset tagged status
-        if (isCarryingFlag && !isTagged) {
-            setIsCarryingFlag(false); // Drop the flag if the agent is not tagged
-            showFlagAtStartingPosition(); // Show the flag at its starting position
-        }
-
-        if (checkInTeamZone(this->blueFlagPos, this->redFlagPos)) {
-            isTagged = false;
-        }
-
-        // Determine the next action for the agent
-        if (isTagged) {
-            // If the agent is tagged, explore the field
-            exploreField(otherAgentsPositions);
-        }
-        else {
-            if (QRandomGenerator::global()->generateDouble() < 0.5) {
-                // 50% chance to explore the field
-                exploreField(otherAgentsPositions);
-            }
-            else {
-                // 50% chance to move towards the flag
-                moveTowardsFlag(otherAgentsPositions);
-            }
-        }
-    }
-}
-
-void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    qreal speed = movementSpeed;
-
-    // Define a target position for exploration
-    QPointF explorationTarget;
-
-    // Generate a random target position within the game field
-    explorationTarget.setX(QRandomGenerator::global()->bounded(0, gameFieldWidth));
-    explorationTarget.setY(QRandomGenerator::global()->bounded(0, gameFieldHeight));
-
-    // Check if a new path needs to be calculated
-    if (path.empty()) {
-        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-        path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
-        currentPathIndex = 0;
-    }
-
-    // Only proceed if there is a path
-    if (!path.empty()) {
-        // Set the next waypoint in the path as the target
-        QPointF target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
-        QPointF direction = target - pos();
-        qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
-
-        // Normalize the direction vector and move the agent towards the target
-        if (distance > 0) {
-            direction /= distance;
-            setPos(pos() + direction * std::min(distance, speed));
-        }
-
-        // Check if the agent has reached the current target or the path point
-        if (distance <= speed) {
-            currentPathIndex++; // Prepare for the next waypoint
-
-            // Check if the agent has reached the end of the path (exploration target)
-            if (currentPathIndex >= path.size()) {
-                // Check if the agent is close to the flag or if there are no enemies nearby
-                float distanceToFlag = calculateDistance(pos(), flagPos);
-                float distanceToEnemy = distanceToNearestEnemy(otherAgentsPositions);
-
-                if (distanceToFlag <= proximityThreshold || distanceToEnemy > tagProximityThreshold) {
-                    // Cancel exploration and move towards the flag
-                    path.clear();
-                    currentPathIndex = 0;
-                    moveTowardsFlag(otherAgentsPositions);
-                    return;
-                }
-
-                // Reached the exploration target, generate a new random target
-                path.clear();
-                currentPathIndex = 0;
-                exploreField(otherAgentsPositions);
-            }
-        }
-    }
-}
-
-void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    QPointF targetPos;
-    if (isCarryingFlag) {
-        // If carrying the flag, set the target position to the base
-        targetPos = (side == "blue") ? blueBasePos : redBasePos;
-    }
-    else {
-        // If not carrying the flag, set the target position to the enemy flag
-        targetPos = (side == "blue") ? redFlagPos : blueFlagPos;
-    }
 
     // Check if a new path needs to be calculated
     if (path.empty()) {
@@ -400,36 +150,92 @@ void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositi
         // Normalize the direction vector and move the agent towards the target
         if (distance > 0) {
             direction /= distance;
-            setPos(pos() + direction * std::min(distance, movementSpeed));
+            setPos(pos() + direction * std::min(distance, speed));
         }
 
         // Check if the agent has reached the current target or the path point
-        if (distance <= movementSpeed) {
+        if (distance <= speed) {
             currentPathIndex++; // Prepare for the next waypoint
 
             // Check if the agent has reached the end of the path (target position)
             if (currentPathIndex >= path.size()) {
                 // Reached the target position
-                if (isCarryingFlag) {
-                    // If carrying the flag, drop it at the base
-                    setIsCarryingFlag(false);
-                    showFlagAtStartingPosition();
-                    incrementScore();
-                }
-                else {
-                    // If not carrying the flag, grab the enemy flag
-                    setIsCarryingFlag(true);
-                    hideFlag();
-                }
-
-                // Clear the path and reset the path index
                 path.clear();
                 currentPathIndex = 0;
             }
         }
     }
+}
+
+
+
+void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
+    QPointF targetFlagPos = (side == "blue") ? redFlagPos : blueFlagPos;
+    moveTowardsTarget(targetFlagPos, otherAgentsPositions);
+
+    // Check if the agent has reached the coordinates of the enemy team base
+    if (pos() == targetFlagPos) {
+        setIsCarryingFlag(true); // The agent reaches the flag and captures it
+        hideFlag(); // Hide the flag when the agent picks it up
+        setPen(QPen(Qt::yellow, 2)); // Set the agent's outline color to gold
+    }
+}
+
+void Agent::moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
+    QPointF targetBasePos = (side == "blue") ? blueBasePos : redBasePos;
+    moveTowardsTarget(targetBasePos, otherAgentsPositions);
+
+    // Check if the agent has reached the end of the path (base position)
+    if (currentPathIndex >= path.size()) {
+        if (isTagged || checkInTeamZone(this->blueFlagPos, this->redFlagPos)) {
+            // If the agent is tagged or in its team zone, reset the tagged status
+            isTagged = false;
+        }
+
+        if (isCarryingFlag && !isTagged) {
+            setIsCarryingFlag(false); // The agent reaches the base and drops the flag
+            showFlagAtStartingPosition(); // Show the flag at its starting position
+            incrementScore(); // Increment the score for the agent's team
+        }
+        else {
+            setIsCarryingFlag(false); // The agent reaches the base but is tagged, so it drops the flag without scoring
+        }
+
+        setPen(QPen(agentColor, 2)); // Restore the agent's original outline color
+
+        // Determine the next action for the agent
+        if (isTagged) {
+            // If the agent is tagged, explore the field
+            exploreField(otherAgentsPositions, otherAgents);
+        }
+        else {
+            if (QRandomGenerator::global()->generateDouble() < 0.5) {
+                // 50% chance to explore the field
+                exploreField(otherAgentsPositions, otherAgents);
+            }
+            else {
+                // 50% chance to move towards the flag
+                moveTowardsFlag(otherAgentsPositions);
+            }
+        }
+    }
+}
+
+void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
+    QPointF targetPos;
+    if (isCarryingFlag) {
+        // If carrying the flag, set the target position to the base
+        targetPos = (side == "blue") ? blueBasePos : redBasePos;
+    }
     else {
-        // Edge case: If there is no path, the agent has reached the target position
+        // If not carrying the flag, set the target position to the enemy flag
+        targetPos = (side == "blue") ? redFlagPos : blueFlagPos;
+    }
+
+    moveTowardsTarget(targetPos, otherAgentsPositions);
+
+    // Check if the agent has reached the end of the path (target position)
+    if (currentPathIndex >= path.size()) {
         if (isCarryingFlag) {
             // If carrying the flag, drop it at the base
             setIsCarryingFlag(false);
@@ -444,167 +250,142 @@ void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositi
     }
 }
 
-void Agent::tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    qreal speed = movementSpeed;
-    Agent* closestEnemy = nullptr;
-    float minDistance = std::numeric_limits<float>::max();
+void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
+    // Define a target position for exploration
+    QPointF explorationTarget;
 
-    // Find the closest enemy that can be tagged
-    for (Agent* enemy : otherAgents) {
-        if (enemy->side != side && !enemy->isTagged && canTagEnemy(enemy)) {
-            float distance = calculateDistance(pos(), enemy->pos());
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestEnemy = enemy;
+    // Generate a random target position within the game field
+    explorationTarget.setX(QRandomGenerator::global()->bounded(0, gameFieldWidth));
+    explorationTarget.setY(QRandomGenerator::global()->bounded(0, gameFieldHeight));
+
+    moveTowardsTarget(explorationTarget, otherAgentsPositions);
+
+    // Check if the agent has reached the end of the path (exploration target)
+    if (currentPathIndex >= path.size()) {
+        // Check if the agent is on the opposite side
+        if (!isOnOwnSide()) {
+            // Check if the agent can be tagged by an enemy
+            for (Agent* enemy : otherAgents) {
+                if (enemy->side != side && !enemy->isTagged && enemy->canTagEnemy(this)) {
+                    isTagged = true;
+                    if (isCarryingFlag) {
+                        setIsCarryingFlag(false); // Drop the flag if the agent is tagged while carrying it
+                        showFlagAtStartingPosition(); // Show the flag at its starting position
+                    }
+                    handleTagged(otherAgentsPositions, otherAgents);
+                    return;
+                }
             }
         }
-    }
 
-    // If a valid enemy is found, move towards and tag them
-    if (closestEnemy != nullptr) {
-        // Check if the agent is allowed to tag (cooldown period has elapsed)
-        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-        if (currentTime - lastTagTime >= tagCooldownPeriod) {
-            isTagging = true; // Set isTagging to true when starting to tag an enemy
-
-            if (path.empty()) {
-                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-                path = pathfinder->findPath(pos().x(), pos().y(), closestEnemy->pos().x(), closestEnemy->pos().y(), otherAgentsPositions, agentPositions);
-                currentPathIndex = 0;
+        // Check if the agent is on its own side
+        if (isOnOwnSide()) {
+            // Find the closest enemy that can be tagged
+            Agent* closestEnemy = nullptr;
+            float minDistance = std::numeric_limits<float>::max();
+            for (Agent* enemy : otherAgents) {
+                if (enemy->side != side && !enemy->isTagged && canTagEnemy(enemy)) {
+                    float distance = calculateDistance(pos(), enemy->pos());
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestEnemy = enemy;
+                    }
+                }
             }
 
-            QPointF target;
-            if (currentPathIndex < path.size()) {
-                target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
-            }
-            else {
-                target = closestEnemy->pos();
-            }
+            // If a valid enemy is found, move towards and tag them
+            if (closestEnemy != nullptr) {
+                // Check if the agent is allowed to tag (cooldown period has elapsed)
+                qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+                if (currentTime - lastTagTime >= tagCooldownPeriod) {
+                    isTagging = true; // Set isTagging to true when starting to tag an enemy
 
-            QPointF direction = target - pos();
-            qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
-
-            if (distance > 0) {
-                direction /= distance; // Normalize the direction vector
-
-                // Move the agent towards the target
-                setPos(pos() + direction * std::min(distance, speed));
-
-                // Check if the agent has reached the target or a path point
-                if (distance <= tagProximityThreshold) {
-                    closestEnemy->isTagged = true; // Tag the enemy
-                    if (isCarryingFlag) {
-                        setIsCarryingFlag(false); // Drop the flag if the agent is carrying it
-                        showFlagAtStartingPosition(); // Show the flag at its starting position
-                        setPen(QPen(agentColor, 2)); // Restore the agent's original outline color
+                    if (path.empty()) {
+                        std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
+                        path = pathfinder->findPath(pos().x(), pos().y(), closestEnemy->pos().x(), closestEnemy->pos().y(), otherAgentsPositions, agentPositions);
+                        currentPathIndex = 0;
                     }
 
-                    lastTagTime = currentTime; // Update the lastTagTime when a tag is made
-                    isTagging = false; // Set isTagging to false when the tagging behavior is completed
-
-                    // Move towards the flag
-                    if (isCarryingFlag) {
-                        moveTowardsBase(otherAgentsPositions);
+                    QPointF target;
+                    if (currentPathIndex < path.size()) {
+                        target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
                     }
                     else {
-                        moveTowardsFlag(otherAgentsPositions);
+                        target = closestEnemy->pos();
                     }
-                }
-                else {
-                    // The agent has reached the enemy
-                    closestEnemy->isTagged = true; // Tag the enemy
-                    lastTagTime = currentTime; // Update the lastTagTime when a tag is made
-                    isTagging = false; // Set isTagging to false when the tagging behavior is completed
 
-                    // Move towards the flag or explore the field after tagging the enemy
-                    if (isCarryingFlag) {
-                        moveTowardsBase(otherAgentsPositions);
+                    QPointF direction = target - pos();
+                    qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
+
+                    if (distance > 0) {
+                        direction /= distance; // Normalize the direction vector
+
+                        // Move the agent towards the target
+                        setPos(pos() + direction * std::min(distance, movementSpeed));
+
+                        // Check if the agent has reached the target or a path point
+                        if (distance <= tagProximityThreshold) {
+                            closestEnemy->isTagged = true; // Tag the enemy
+                            if (isCarryingFlag) {
+                                setIsCarryingFlag(false); // Drop the flag if the agent is carrying it
+                                showFlagAtStartingPosition(); // Show the flag at its starting position
+                                setPen(QPen(agentColor, 2)); // Restore the agent's original outline color
+                            }
+
+                            lastTagTime = currentTime; // Update the lastTagTime when a tag is made
+                            isTagging = false; // Set isTagging to false when the tagging behavior is completed
+
+                            // Move towards the flag or explore the field after tagging the enemy
+                            if (isCarryingFlag) {
+                                moveTowardsBase(otherAgentsPositions, otherAgents);
+                            }
+                            else {
+                                moveTowardsFlag(otherAgentsPositions);
+                            }
+                        }
                     }
-                    else {
-                        moveTowardsFlag(otherAgentsPositions);
-                    }
-                }
-            }
-            else {
-                // If the agent can't tag due to cooldown, move towards the flag or explore the field
-                if (isCarryingFlag) {
-                    moveTowardsBase(otherAgentsPositions);
-                }
-                else {
-                    moveTowardsFlag(otherAgentsPositions);
                 }
             }
         }
         else {
-            isTagging = false; // Set isTagging to false when no valid enemy is found
+            // Check if the agent is close to the flag or if there are no enemies nearby
+            float distanceToFlag = calculateDistance(pos(), flagPos);
+            float distanceToEnemy = distanceToNearestEnemy(otherAgentsPositions);
 
-            // If no enemy is found, move towards the flag or explore the field
-            if (isCarryingFlag) {
-                moveTowardsBase(otherAgentsPositions);
-            }
-            else {
+            if (distanceToFlag <= proximityThreshold || distanceToEnemy > tagProximityThreshold) {
+                // Cancel exploration and move towards the flag
+                path.clear();
+                currentPathIndex = 0;
                 moveTowardsFlag(otherAgentsPositions);
+                return;
             }
         }
+
+        // Reached the exploration target, generate a new random target
+        path.clear();
+        currentPathIndex = 0;
+        exploreField(otherAgentsPositions, otherAgents);
     }
 }
 
-void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    qreal speed = movementSpeed;
-    std::pair<int, int> opponentWithFlagPos;
-    bool opponentFound = false;
+void Agent::handleTagged(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
+    // Set the target position to the agent's color base
+    QPointF targetBasePos = (side == "blue") ? blueBasePos : redBasePos;
 
-    // Find the position of the opponent carrying the flag
-    for (const auto& pos : otherAgentsPositions) {
-        if ((side == "blue" && qFuzzyCompare(static_cast<double>(pos.first), redFlagPos.x()) &&
-            qFuzzyCompare(static_cast<double>(pos.second), redFlagPos.y())) ||
-            (side == "red" && qFuzzyCompare(static_cast<double>(pos.first), blueFlagPos.x()) &&
-                qFuzzyCompare(static_cast<double>(pos.second), blueFlagPos.y()))) {
-            opponentWithFlagPos = pos;
-            opponentFound = true;
-            break;
-        }
-    }
+    moveTowardsTarget(targetBasePos, otherAgentsPositions);
 
-    // If an opponent with the flag is found, move towards them
-    if (opponentFound) {
-        if (path.empty()) {
-            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-            path = pathfinder->findPath(pos().x(), pos().y(), opponentWithFlagPos.first, opponentWithFlagPos.second, otherAgentsPositions, agentPositions);
-            currentPathIndex = 0;
-        }
+    // Check if the agent has reached the end of the path (base position)
+    if (currentPathIndex >= path.size()) {
+        isTagged = false; // Reset the tagged status when the agent reaches its base
 
-        QPointF target;
-        if (currentPathIndex < path.size()) {
-            target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
+        // Determine the next action for the agent
+        if (QRandomGenerator::global()->generateDouble() < 0.5) {
+            // 50% chance to explore the field
+            exploreField(otherAgentsPositions, otherAgents);
         }
         else {
-            target = QPointF(opponentWithFlagPos.first, opponentWithFlagPos.second);
-        }
-
-        QPointF direction = target - pos();
-        qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
-
-        if (distance > 0) {
-            direction /= distance; // Normalize the direction vector
-
-            // Move the agent towards the target
-            setPos(pos() + direction * std::min(distance, speed));
-
-            // Check if the agent has reached the target or a path point
-            if (currentPathIndex < path.size() - 1) {
-                currentPathIndex++; // Set the next point as the current target for the next update
-            }
-            else {
-                // Reached the opponent with the flag, add logic for tagging or capturing the flag
-                path.clear(); // Clear path data
-                currentPathIndex = 0; // Reset path index
-            }
-        }
-        else {
-            // The agent has reached the opponent with the flag
-            path.clear(); // Clear path data
-            currentPathIndex = 0; // Reset path index
+            // 50% chance to move towards the flag
+            moveTowardsFlag(otherAgentsPositions);
         }
     }
 }
@@ -655,123 +436,6 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
     return minDistance;
 }
 
-void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    qreal speed = movementSpeed;
-    Agent* closestEnemy = nullptr;
-    float minDistance = std::numeric_limits<float>::max();
-
-    // Find the closest enemy that can be tagged
-    for (Agent* enemy : otherAgents) {
-        if (enemy->side != side && !enemy->isTagged && canTagEnemy(enemy)) {
-            float distance = calculateDistance(pos(), enemy->pos());
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestEnemy = enemy;
-            }
-        }
-    }
-
-    // If a valid enemy is found, move towards and tag them
-    if (closestEnemy != nullptr) {
-        // Check if the agent is allowed to tag (cooldown period has elapsed)
-        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-        if (currentTime - lastTagTime >= tagCooldownPeriod) {
-            isTagging = true; // Set isTagging to true when starting to tag an enemy
-
-            if (path.empty()) {
-                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-                path = pathfinder->findPath(pos().x(), pos().y(), closestEnemy->pos().x(), closestEnemy->pos().y(), otherAgentsPositions, agentPositions);
-                currentPathIndex = 0;
-            }
-
-            QPointF target;
-            if (currentPathIndex < path.size()) {
-                target = QPointF(path[currentPathIndex].first, path[currentPathIndex].second);
-            }
-            else {
-                target = closestEnemy->pos();
-            }
-
-            QPointF direction = target - pos();
-            qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
-
-            if (distance > 0) {
-                direction /= distance; // Normalize the direction vector
-
-                // Move the agent towards the target
-                setPos(pos() + direction * std::min(distance, speed));
-
-                // Check if the agent has reached the target or a path point
-                if (distance <= speed) {
-                    if (currentPathIndex < path.size() - 1) {
-                        currentPathIndex++; // Set the next point as the current target for the next update
-                    }
-                    else {
-                        closestEnemy->isTagged = true; // Tag the enemy
-                        lastTagTime = currentTime; // Update the lastTagTime when a tag is made
-
-                        // Continue the agent's movement after tagging the enemy
-                        if (path.size() > currentPathIndex + 1) {
-                            currentPathIndex++; // Set the next point as the current target for the next update
-                        }
-                        else {
-                            // Reached the end of the path, generate a new exploration target
-                            path.clear();
-                            currentPathIndex = 0;
-                            std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-                            QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
-                                QRandomGenerator::global()->bounded(0, gameFieldHeight));
-                            path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
-                        }
-                        isTagging = false; // Set isTagging to false when the tagging behavior is completed
-                    }
-                }
-            }
-            else {
-                // The agent has reached the enemy
-                closestEnemy->isTagged = true; // Tag the enemy
-                lastTagTime = currentTime; // Update the lastTagTime when a tag is made
-
-                // Continue the agent's movement after tagging the enemy
-                if (path.size() > currentPathIndex + 1) {
-                    currentPathIndex++; // Set the next point as the current target for the next update
-                }
-                else {
-                    // Reached the end of the path, generate a new exploration target
-                    path.clear();
-                    currentPathIndex = 0;
-                    std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-                    QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
-                        QRandomGenerator::global()->bounded(0, gameFieldHeight));
-                    path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
-                }
-                isTagging = false; // Set isTagging to false when the tagging behavior is completed
-            }
-        }
-    }
-    else {
-        isTagging = false; // Set isTagging to false when no valid enemy is found
-
-        // Check if there are no more enemies nearby
-        if (distanceToNearestEnemy(otherAgentsPositions) > tagProximityThreshold) {
-            // If no enemies are nearby, either explore the field or move towards the enemy flag
-            if (QRandomGenerator::global()->generateDouble() < 0.5) {
-                path.clear();
-                currentPathIndex = 0;
-                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-                QPointF explorationTarget(QRandomGenerator::global()->bounded(0, gameFieldWidth),
-                    QRandomGenerator::global()->bounded(0, gameFieldHeight));
-                path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
-            }
-            else {
-                path.clear();
-                currentPathIndex = 0;
-                std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
-                path = pathfinder->findPath(pos().x(), pos().y(), flagPos.x(), flagPos.y(), otherAgentsPositions, agentPositions);
-            }
-        }
-    }
-}
 
 std::vector<std::pair<int, int>> Agent::getOtherAgentPositions(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     std::vector<std::pair<int, int>> agentPositions;

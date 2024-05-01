@@ -22,18 +22,17 @@ public:
     float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     float proximityThreshold;
     float tagProximityThreshold;
+    void moveTowardsTarget(const QPointF& targetPos, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    void moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsPositions);
+    void moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
+    void exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
+    void handleTagged(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
     void hideFlag();
     void showFlagAtStartingPosition();
-    void defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void setIsCarryingFlag(bool value);
     void setFlagPosition(const QPointF& position);
     void setBasePosition(const QPointF& position);
-    void exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    void chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    void tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void pickUpFlag(FlagManager* flag) { carriedFlag = flag; }
     void dropFlag() { carriedFlag = nullptr; }
     void incrementScore();
