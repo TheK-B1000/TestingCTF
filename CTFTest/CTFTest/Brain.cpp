@@ -5,15 +5,10 @@
 
 Brain::Brain() : flagCaptured(false), score(0), proximityThreshold(250.0f), tagProximityThreshold(200.0f) {}
 
-BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle) {
+BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle, bool inSide) {
     if (isTagged) {
         flagCaptured = false; // Reset flag captured status when tagged
         return BrainDecision::ReturnToHomeZone;
-    }
-
-    if (isStuckInMiddle || (!hasFlag && distanceToFlag > proximityThreshold && !enemyHasFlag && distanceToNearestEnemy > tagProximityThreshold)) {
-        // If the agent is stuck in the middle for too long or can't find the flag, can't tag, and doesn't need to defend, explore the field
-        return BrainDecision::Explore;
     }
 
     if (hasFlag) {
@@ -30,46 +25,53 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceT
                 return BrainDecision::AvoidEnemy;
             }
             else {
+                // If no enemy is nearby, move towards the home zone
                 return BrainDecision::ReturnToHomeZone;
             }
         }
     }
     else {
         if (enemyHasFlag) {
-            if (inHomeZone) {
+            if (inSide) {
                 // If the enemy has the flag and the agent is in the home zone, try to tag them
                 return BrainDecision::TagEnemy;
             }
             else {
-                return BrainDecision::RecoverFlag;
-            }
-        }
-
-        if (inHomeZone) {
-            if (distanceToNearestEnemy < tagProximityThreshold) {
-                // If an enemy is nearby in the home zone, tag them
-                return BrainDecision::TagEnemy;
-            }
-            else {
-                // If no enemy is nearby in the home zone, defend the flag
-                return BrainDecision::DefendFlag;
-            }
-        }
-        else {
-            if (isStuckInMiddle) {
-                // If the agent is stuck in the middle for too long, explore the field
-                return BrainDecision::Explore;
-            }
-            else {
                 if (distanceToNearestEnemy < tagProximityThreshold) {
-                    // If an enemy is nearby on the enemy side, avoid them
+                    // If an enemy is nearby while the enemy has the flag, avoid the enemy
                     return BrainDecision::AvoidEnemy;
                 }
                 else {
-                    if (distanceToFlag <= proximityThreshold) {
+                    // If the enemy has the flag and the agent is not in the home zone, recover the flag
+                    return BrainDecision::RecoverFlag;
+                }
+            }
+        }
+        else {
+            if (inSide) {
+                if (distanceToNearestEnemy < tagProximityThreshold) {
+                    // If an enemy is nearby in the home zone, tag them
+                    return BrainDecision::TagEnemy;
+                }
+                else {
+                    // If no enemy is nearby in the home zone, defend the flag
+                    return BrainDecision::DefendFlag;
+                }
+            }
+            else {
+                if (isStuckInMiddle || distanceToFlag > proximityThreshold) {
+                    // If the agent is stuck in the middle for too long or the flag is far away, explore the field
+                    return BrainDecision::Explore;
+                }
+                else {
+                    if (distanceToNearestEnemy < tagProximityThreshold) {
+                        // If an enemy is nearby on the enemy side, avoid the enemy
+                        return BrainDecision::AvoidEnemy;
+                    }
+                    else {
+                        // If no enemy is nearby and the flag is within proximity, grab the flag
                         return BrainDecision::GrabFlag;
                     }
-                    return BrainDecision::Explore;
                 }
             }
         }

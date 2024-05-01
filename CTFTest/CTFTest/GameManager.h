@@ -21,9 +21,12 @@ public:
     void runTestCase1();
     void runTestCase2(int agentCount);
     void runTestCase3();
+    void runTestCase4();
+    void runTestCase5();
     void updateAgentPositions();
     bool isFlagCaptured(const std::string& side) const;
     void resetSimulation();
+    void resetScoreAndGameOverText();
     void incrementBlueScore();
     void incrementRedScore();
     void gameLoop();
@@ -32,6 +35,8 @@ public:
     void updateScoreDisplay();
     void updateTimeDisplay();
     QGraphicsScene* getScene() const { return scene; }
+    std::vector<std::shared_ptr<Agent>>& getBlueAgents() { return blueAgents; }
+    std::vector<std::shared_ptr<Agent>>& getRedAgents() { return redAgents; }
 
     static int blueScore;
     static int redScore;

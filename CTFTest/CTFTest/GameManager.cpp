@@ -76,6 +76,7 @@ void GameManager::setupScene() {
 
     // Create flags
     QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
+    blueFlag->setData(QGraphicsItem::UserType, QGraphicsItem::UserType + 1);
     QPolygon blueTriangle;
     qreal blueFlagCenter = blueZone->rect().center().y();
     blueTriangle << QPoint(blueFlagPos.x() - 10, blueFlagCenter - 20)
@@ -86,6 +87,7 @@ void GameManager::setupScene() {
     scene->addItem(blueFlag);
 
     QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
+    redFlag->setData(QGraphicsItem::UserType, QGraphicsItem::UserType + 1);
     QPolygon redTriangle;
     qreal redFlagCenter = redZone->rect().center().y();
     redTriangle << QPoint(redFlagPos.x() - 10, redFlagCenter - 20)
@@ -271,6 +273,9 @@ void GameManager::runTestCase2(int agentCount) {
     redScore = 0;
     updateScoreDisplay();
 
+    // Reset the score and remove the "Game Over" text
+    resetScoreAndGameOverText();
+
     // Reset the time remaining
     int gameDuration = 4000;
     timeRemaining = gameDuration;
@@ -364,6 +369,121 @@ void GameManager::runTestCase3() {
     redScore = 0;
     updateScoreDisplay();
 
+    // Reset the score and remove the "Game Over" text
+    resetScoreAndGameOverText();
+
+    // Reset the time remaining
+    int gameDuration = 4000;
+    timeRemaining = gameDuration;
+    updateTimeDisplay();
+
+    // Stop the current game timer
+    gameTimer->stop();
+
+    // Start a new game timer
+    gameTimer->start(16);
+}
+
+void GameManager::runTestCase4() {
+    // Remove the old team zones
+    scene->removeItem(blueZone);
+    scene->removeItem(redZone);
+    delete blueZone;
+    delete redZone;
+
+    // Create new team zones with different shapes
+    blueZone = new QGraphicsEllipseItem(30, 240, 120, 120);
+    QPen bluePen(Qt::blue);
+    bluePen.setWidth(3);
+    blueZone->setPen(bluePen);
+    blueZone->setBrush(Qt::NoBrush);
+    scene->addItem(blueZone);
+
+    redZone = new QGraphicsEllipseItem(670, 240, 100, 100);
+    QPen redPen(Qt::red);
+    redPen.setWidth(3);
+    redZone->setPen(redPen);
+    redZone->setBrush(Qt::NoBrush);
+    scene->addItem(redZone);
+
+    // Update the flag positions
+    blueFlagPos = blueZone->rect().center();
+    redFlagPos = redZone->rect().center();
+
+    // Update the base positions
+    blueBasePos = QPointF(70, 280);
+    redBasePos = QPointF(730, 280);
+
+    // Clear the existing agents
+    for (const auto& agent : blueAgents) {
+        scene->removeItem(agent.get());
+    }
+    blueAgents.clear();
+
+    for (const auto& agent : redAgents) {
+        scene->removeItem(agent.get());
+    }
+    redAgents.clear();
+
+    // Create new agents with the updated flag and base positions
+    setupAgents();
+
+    // Reset the scores
+    blueScore = 0;
+    redScore = 0;
+    updateScoreDisplay();
+
+    // Reset the score and remove the "Game Over" text
+    resetScoreAndGameOverText();
+
+    // Reset the time remaining
+    int gameDuration = 4000;
+    timeRemaining = gameDuration;
+    updateTimeDisplay();
+
+    // Stop the current game timer
+    gameTimer->stop();
+
+    // Start a new game timer
+    gameTimer->start(16);
+}
+
+void GameManager::runTestCase5() {
+    // Clear the existing agents
+    for (const auto& agent : blueAgents) {
+        scene->removeItem(agent.get());
+    }
+    blueAgents.clear();
+
+    for (const auto& agent : redAgents) {
+        scene->removeItem(agent.get());
+    }
+    redAgents.clear();
+
+    // Create new agents with the default positions
+    setupAgents();
+
+    // Disable some agents randomly
+    for (const auto& agent : blueAgents) {
+        if (QRandomGenerator::global()->bounded(2) == 0) {
+            agent->setEnabled(false);
+        }
+    }
+
+    for (const auto& agent : redAgents) {
+        if (QRandomGenerator::global()->bounded(2) == 0) {
+            agent->setEnabled(false);
+        }
+    }
+
+    // Reset the scores
+    blueScore = 0;
+    redScore = 0;
+    updateScoreDisplay();
+
+    // Reset the score and remove the "Game Over" text
+    resetScoreAndGameOverText();
+
     // Reset the time remaining
     int gameDuration = 4000;
     timeRemaining = gameDuration;
@@ -434,6 +554,10 @@ void GameManager::resetSimulation() {
             scene->removeItem(item);
             delete item;
         }
+        else if (item->type() == QGraphicsTextItem::Type && item != blueScoreTextItem && item != redScoreTextItem && item != timeRemainingTextItem) {
+            scene->removeItem(item);
+            delete item;
+        }
     }
 
     // Create new flags
@@ -466,7 +590,7 @@ void GameManager::resetSimulation() {
     updateScoreDisplay();
 
     // Reset the time remaining
-    int gameDuration = 2000;
+    int gameDuration = 4000;
     timeRemaining = gameDuration;
     updateTimeDisplay();
 
@@ -475,6 +599,21 @@ void GameManager::resetSimulation() {
 
     // Start a new game timer
     gameTimer->start(16);
+}
+
+void GameManager::resetScoreAndGameOverText() {
+    // Reset the score display
+    blueScoreTextItem->setPlainText("Blue Score: 0");
+    redScoreTextItem->setPlainText("Red Score: 0");
+
+    // Remove the "Game Over" text
+    QList<QGraphicsItem*> items = scene->items();
+    for (QGraphicsItem* item : items) {
+        if (item->type() == QGraphicsTextItem::Type && item != blueScoreTextItem && item != redScoreTextItem && item != timeRemainingTextItem) {
+            scene->removeItem(item);
+            delete item;
+        }
+    }
 }
 
 void GameManager::incrementBlueScore() {

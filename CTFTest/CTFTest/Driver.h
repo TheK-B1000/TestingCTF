@@ -14,6 +14,8 @@ private slots:
     void runTestCase1();
     void runTestCase2();
     void runTestCase3();
+    void runTestCase4();
+    void runTestCase5();
 
 private:
     QMenu* testCaseMenu;
