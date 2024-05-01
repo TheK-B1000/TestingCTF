@@ -32,6 +32,8 @@ public:
     void updateScoreDisplay();
     void updateTimeDisplay();
     QGraphicsScene* getScene() const { return scene; }
+    std::vector<std::shared_ptr<Agent>>& getBlueAgents() { return blueAgents; }
+    std::vector<std::shared_ptr<Agent>>& getRedAgents() { return redAgents; }
 
     static int blueScore;
     static int redScore;

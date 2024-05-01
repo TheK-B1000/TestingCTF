@@ -316,18 +316,6 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
     }
 }
 
-std::vector<std::pair<int, int>> Agent::getOtherAgentPositions(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    std::vector<std::pair<int, int>> agentPositions;
-
-    for (const auto& pos : otherAgentsPositions) {
-        if (pos != std::make_pair(static_cast<int>(this->pos().x()), static_cast<int>(this->pos().y()))) {
-            agentPositions.push_back(pos);
-        }
-    }
-
-    return agentPositions;
-}
-
 void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     QPointF targetPos;
     if (isCarryingFlag) {
@@ -643,28 +631,6 @@ bool Agent::isOpponentCarryingFlag(const std::vector<std::pair<int, int>>& other
     return false;
 }
 
-void Agent::hideFlag() {
-    QGraphicsScene* scene = this->scene();
-    QList<QGraphicsItem*> items = scene->items();
-    for (QGraphicsItem* item : items) {
-        if (item->type() == QGraphicsItem::UserType + 1) { // Assuming the flag item has a unique user type
-            item->setVisible(false); // Hide the flag item
-            break;
-        }
-    }
-}
-
-void Agent::showFlagAtStartingPosition() {
-    QGraphicsScene* scene = this->scene();
-    QList<QGraphicsItem*> items = scene->items();
-    for (QGraphicsItem* item : items) {
-        if (item->type() == QGraphicsItem::UserType + 1) { // Assuming the flag item has a unique user type
-            item->setVisible(true); // Show the flag item
-            item->setPos((side == "blue") ? redFlagPos : blueFlagPos); // Set the flag position based on the agent's side
-            break;
-        }
-    }
-}
 
 void Agent::avoidEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     qreal speed = movementSpeed;
@@ -842,10 +808,58 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
     }
 }
 
+std::vector<std::pair<int, int>> Agent::getOtherAgentPositions(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
+    std::vector<std::pair<int, int>> agentPositions;
+
+    for (const auto& pos : otherAgentsPositions) {
+        if (pos != std::make_pair(static_cast<int>(this->pos().x()), static_cast<int>(this->pos().y()))) {
+            agentPositions.push_back(pos);
+        }
+    }
+
+    return agentPositions;
+}
+
 bool Agent::isInMiddleOfField() const {
     QPointF fieldCenter(gameFieldWidth / 2, gameFieldHeight / 2);
     float distanceToCenter = calculateDistance(pos(), fieldCenter);
     return distanceToCenter < 100.0f;
+}
+
+void Agent::hideFlag() {
+    QGraphicsScene* scene = this->scene();
+    QList<QGraphicsItem*> items = scene->items();
+    for (QGraphicsItem* item : items) {
+        if (item->data(QGraphicsItem::UserType) == QGraphicsItem::UserType + 1) {
+            item->setVisible(false); // Hide the flag item
+            break;
+        }
+    }
+}
+
+void Agent::showFlagAtStartingPosition() {
+    QGraphicsScene* scene = this->scene();
+    QList<QGraphicsItem*> items = scene->items();
+    for (QGraphicsItem* item : items) {
+        if (item->type() == QGraphicsItem::UserType + 1) { // Assuming the flag item has a unique user type
+            item->setVisible(true); // Show the flag item
+            item->setPos((side == "blue") ? redFlagPos : blueFlagPos); // Set the flag position based on the agent's side
+            break;
+        }
+    }
+}
+
+void Agent::setIsCarryingFlag(bool isCarrying) {
+    if (isCarrying) {
+        // Check if any other agent from the same team is already carrying the flag
+        for (const auto& agent : (side == "blue" ? gameManager->getBlueAgents() : gameManager->getRedAgents())) {
+            if (agent->isCarryingFlag) {
+                // Another agent from the same team is already carrying the flag, so this agent cannot carry it
+                return;
+            }
+        }
+    }
+    isCarryingFlag = isCarrying;
 }
 
 void Agent::setFlagPosition(const QPointF& position) {

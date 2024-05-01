@@ -76,6 +76,7 @@ void GameManager::setupScene() {
 
     // Create flags
     QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
+    blueFlag->setData(QGraphicsItem::UserType, QGraphicsItem::UserType + 1);
     QPolygon blueTriangle;
     qreal blueFlagCenter = blueZone->rect().center().y();
     blueTriangle << QPoint(blueFlagPos.x() - 10, blueFlagCenter - 20)
@@ -86,6 +87,7 @@ void GameManager::setupScene() {
     scene->addItem(blueFlag);
 
     QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
+    redFlag->setData(QGraphicsItem::UserType, QGraphicsItem::UserType + 1);
     QPolygon redTriangle;
     qreal redFlagCenter = redZone->rect().center().y();
     redTriangle << QPoint(redFlagPos.x() - 10, redFlagCenter - 20)
@@ -431,6 +433,10 @@ void GameManager::resetSimulation() {
     QList<QGraphicsItem*> items = scene->items();
     for (QGraphicsItem* item : items) {
         if (item->type() == QGraphicsPolygonItem::Type) {
+            scene->removeItem(item);
+            delete item;
+        }
+        else if (item->type() == QGraphicsTextItem::Type && item != blueScoreTextItem && item != redScoreTextItem && item != timeRemainingTextItem) {
             scene->removeItem(item);
             delete item;
         }

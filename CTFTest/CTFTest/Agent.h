@@ -28,7 +28,7 @@ public:
     void showFlagAtStartingPosition();
     void avoidEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    void setIsCarryingFlag(bool value) { isCarryingFlag = value; }
+    void setIsCarryingFlag(bool value);
     void setFlagPosition(const QPointF& position);
     void setBasePosition(const QPointF& position);
     void exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions);
