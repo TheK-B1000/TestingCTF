@@ -5,7 +5,7 @@
 
 Brain::Brain() : flagCaptured(false), score(0), proximityThreshold(250.0f), tagProximityThreshold(200.0f) {}
 
-BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle) {
+BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle, bool inSide) {
     if (isTagged) {
         flagCaptured = false; // Reset flag captured status when tagged
         return BrainDecision::ReturnToHomeZone;
@@ -32,17 +32,23 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceT
     }
     else {
         if (enemyHasFlag) {
-            if (inHomeZone) {
+            if (inSide) {
                 // If the enemy has the flag and the agent is in the home zone, try to tag them
                 return BrainDecision::TagEnemy;
             }
             else {
-                // If the enemy has the flag and the agent is not in the home zone, recover the flag
-                return BrainDecision::RecoverFlag;
+                if (distanceToNearestEnemy < tagProximityThreshold) {
+                    // If an enemy is nearby while the enemy has the flag, avoid the enemy
+                    return BrainDecision::AvoidEnemy;
+                }
+                else {
+                    // If the enemy has the flag and the agent is not in the home zone, recover the flag
+                    return BrainDecision::RecoverFlag;
+                }
             }
         }
         else {
-            if (inHomeZone) {
+            if (inSide) {
                 if (distanceToNearestEnemy < tagProximityThreshold) {
                     // If an enemy is nearby in the home zone, tag them
                     return BrainDecision::TagEnemy;
@@ -57,13 +63,15 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceT
                     // If the agent is stuck in the middle for too long or the flag is far away, explore the field
                     return BrainDecision::Explore;
                 }
-                else if (distanceToNearestEnemy < tagProximityThreshold) {
-                    // If an enemy is nearby on the enemy side, avoid them
-                    return BrainDecision::AvoidEnemy;
-                }
                 else {
-                    // If no enemy is nearby and the flag is within proximity, grab the flag
-                    return BrainDecision::GrabFlag;
+                    if (distanceToNearestEnemy < tagProximityThreshold) {
+                        // If an enemy is nearby on the enemy side, avoid the enemy
+                        return BrainDecision::AvoidEnemy;
+                    }
+                    else {
+                        // If no enemy is nearby and the flag is within proximity, grab the flag
+                        return BrainDecision::GrabFlag;
+                    }
                 }
             }
         }

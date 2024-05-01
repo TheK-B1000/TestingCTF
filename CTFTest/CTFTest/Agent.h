@@ -26,13 +26,11 @@ public:
     void moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void hideFlag();
     void showFlagAtStartingPosition();
-    void avoidEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void setIsCarryingFlag(bool value);
     void setFlagPosition(const QPointF& position);
     void setBasePosition(const QPointF& position);
     void exploreField(const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    std::vector<std::pair<int, int>> getOtherAgentPositions(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void tagEnemy(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions);
@@ -42,9 +40,11 @@ public:
     bool canTagEnemy(Agent* enemy) const;
     bool isPathEmpty() const;
     bool checkInTeamZone(const QPointF& blueFlagPos, const QPointF& redFlagPos) const;
+    bool isOnOwnSide() const;
     bool isOpponentCarryingFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     bool getIsCarryingFlag() const;
     bool isInMiddleOfField() const;
+    std::vector<std::pair<int, int>> getOtherAgentPositions(const std::vector<std::pair<int, int>>& otherAgentsPositions);
 
 private:
     QPointF flagPos;

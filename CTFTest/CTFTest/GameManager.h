@@ -21,9 +21,12 @@ public:
     void runTestCase1();
     void runTestCase2(int agentCount);
     void runTestCase3();
+    void runTestCase4();
+    void runTestCase5();
     void updateAgentPositions();
     bool isFlagCaptured(const std::string& side) const;
     void resetSimulation();
+    void resetScoreAndGameOverText();
     void incrementBlueScore();
     void incrementRedScore();
     void gameLoop();
