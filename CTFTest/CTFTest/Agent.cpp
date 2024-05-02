@@ -6,6 +6,7 @@
 #include <QBrush>
 #include <QGraphicsScene>
 #include <Brain.h>
+#include <memory>
 #include <QRandomGenerator>
 
 Agent::Agent(const QColor& color, const QPointF& flagPos, const QPointF& basePos, int sceneWidth, int sceneHeight, GameManager* gameManager)
@@ -609,52 +610,6 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     }
 }
 
-bool Agent::canTagEnemy(Agent* enemy) const {
-    if (enemy == nullptr || enemy->side == side || isTagged || enemy->isTagged)
-        return false;
-
-    // Check if the agent is on its side of the field
-    QPointF agentPos(pos().x(), pos().y());
-    bool isAgentOnHomeSide = (side == "blue") ? agentPos.x() < gameFieldWidth / 2 : agentPos.x() >= gameFieldWidth / 2;
-
-    if (!isAgentOnHomeSide)
-        return false; // Agent cannot tag enemies when on the enemy side
-
-    // Check if the enemy is on the opposite side of the field
-    QPointF enemyPos(enemy->pos().x(), enemy->pos().y());
-    bool isEnemyInOppositeSide = (side == "blue") ? enemyPos.x() >= gameFieldWidth / 2 : enemyPos.x() < gameFieldWidth / 2;
-
-    // Check if the agent is within the tag range of the enemy
-    float distance = calculateDistance(agentPos, enemyPos);
-    const float tagRange = 200.0f;
-
-    return isEnemyInOppositeSide && distance <= tagRange;
-}
-
-float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
-    float minDistance = std::numeric_limits<float>::max();
-    QPointF agentPos(pos().x(), pos().y());
-
-    for (const auto& pos : otherAgentsPositions) {
-        if (side != "blue" && pos.first < gameFieldWidth / 2) {
-            // Enemy position is on the blue side
-            float distance = calculateDistance(agentPos, QPointF(pos.first, pos.second));
-            if (distance < minDistance) {
-                minDistance = distance;
-            }
-        }
-        else if (side != "red" && pos.first >= gameFieldWidth / 2) {
-            // Enemy position is on the red side
-            float distance = calculateDistance(agentPos, QPointF(pos.first, pos.second));
-            if (distance < minDistance) {
-                minDistance = distance;
-            }
-        }
-    }
-
-    return minDistance;
-}
-
 void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     qreal speed = movementSpeed;
     Agent* closestEnemy = nullptr;
@@ -784,6 +739,52 @@ std::vector<std::pair<int, int>> Agent::getOtherAgentPositions(const std::vector
     return agentPositions;
 }
 
+bool Agent::canTagEnemy(Agent* enemy) const {
+    if (enemy == nullptr || enemy->side == side || isTagged || enemy->isTagged)
+        return false;
+
+    // Check if the agent is on its side of the field
+    QPointF agentPos(pos().x(), pos().y());
+    bool isAgentOnHomeSide = (side == "blue") ? agentPos.x() < gameFieldWidth / 2 : agentPos.x() >= gameFieldWidth / 2;
+
+    if (!isAgentOnHomeSide)
+        return false; // Agent cannot tag enemies when on the enemy side
+
+    // Check if the enemy is on the opposite side of the field
+    QPointF enemyPos(enemy->pos().x(), enemy->pos().y());
+    bool isEnemyInOppositeSide = (side == "blue") ? enemyPos.x() >= gameFieldWidth / 2 : enemyPos.x() < gameFieldWidth / 2;
+
+    // Check if the agent is within the tag range of the enemy
+    float distance = calculateDistance(agentPos, enemyPos);
+    const float tagRange = 200.0f;
+
+    return isEnemyInOppositeSide && distance <= tagRange;
+}
+
+float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
+    float minDistance = std::numeric_limits<float>::max();
+    QPointF agentPos(pos().x(), pos().y());
+
+    for (const auto& pos : otherAgentsPositions) {
+        if (side != "blue" && pos.first < gameFieldWidth / 2) {
+            // Enemy position is on the blue side
+            float distance = calculateDistance(agentPos, QPointF(pos.first, pos.second));
+            if (distance < minDistance) {
+                minDistance = distance;
+            }
+        }
+        else if (side != "red" && pos.first >= gameFieldWidth / 2) {
+            // Enemy position is on the red side
+            float distance = calculateDistance(agentPos, QPointF(pos.first, pos.second));
+            if (distance < minDistance) {
+                minDistance = distance;
+            }
+        }
+    }
+
+    return minDistance;
+}
+
 bool Agent::isPathEmpty() const {
     return path.empty();
 }
@@ -863,10 +864,10 @@ void Agent::showFlagAtStartingPosition() {
 
 void Agent::setIsCarryingFlag(bool isCarrying) {
     if (isCarrying) {
-        // Check if any other agent from the same team is already carrying the flag
+        // Check if any other agent from the same team is already carrying the same flag
         for (const auto& agent : (side == "blue" ? gameManager->getBlueAgents() : gameManager->getRedAgents())) {
-            if (agent->isCarryingFlag) {
-                // Another agent from the same team is already carrying the flag, so this agent cannot carry it
+            if (std::addressof(*agent) != this && agent->isCarryingFlag && agent->flagPos == this->flagPos) {
+                // Another agent from the same team is already carrying the same flag, so this agent cannot carry it
                 return;
             }
         }
