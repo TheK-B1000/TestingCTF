@@ -34,7 +34,7 @@ GameManager::GameManager(QWidget* parent) : QGraphicsView(parent), gameFieldWidt
     setupTimeDisplay();
 
     // Start a timer to update agents
-    int gameDuration = 2500;
+    int gameDuration = 4000;
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
