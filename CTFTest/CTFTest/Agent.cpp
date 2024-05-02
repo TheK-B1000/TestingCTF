@@ -351,6 +351,28 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
 
             // Check if the agent has reached the end of the path (exploration target)
             if (currentPathIndex >= path.size()) {
+                // Check if the agent is on the opposite side
+                if (!isOnOwnSide()) {
+                    // Check if the agent can be tagged by an enemy
+                    for (const auto& enemyPos : otherAgentsPositions) {
+                        if ((side == "blue" && enemyPos.first >= gameFieldWidth / 2) ||
+                            (side == "red" && enemyPos.first < gameFieldWidth / 2)) {
+                            QPointF enemyPosition(enemyPos.first, enemyPos.second);
+                            float distance = calculateDistance(pos(), enemyPosition);
+                            if (distance <= tagProximityThreshold) {
+                                isTagged = true;
+                                gameManager->incrementTaggingFrequency(this); // Increment the tagging frequency
+                                if (isCarryingFlag) {
+                                    setIsCarryingFlag(false); // Drop the flag if the agent is tagged while carrying it
+                                    showFlagAtStartingPosition(); // Show the flag at its starting position
+                                }
+                                moveTowardsBase(otherAgentsPositions);
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 // Check if the agent is close to the flag or if there are no enemies nearby
                 float distanceToFlag = calculateDistance(pos(), flagPos);
                 float distanceToEnemy = distanceToNearestEnemy(otherAgentsPositions);

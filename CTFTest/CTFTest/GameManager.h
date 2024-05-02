@@ -9,6 +9,8 @@
 #include "GameManager.h"
 #include "Pathfinder.h"
 #include <QList>
+#include <fstream>
+#include <sstream>
 
 class GameManager : public QGraphicsView {
 public:
@@ -29,11 +31,15 @@ public:
     void resetScoreAndGameOverText();
     void incrementBlueScore();
     void incrementRedScore();
+    void incrementTaggingFrequency(Agent* agent);
     void gameLoop();
     void stopGame();
     void declareWinner();
     void updateScoreDisplay();
     void updateTimeDisplay();
+    void writeScoreHistoryToCSV(const std::string& filename);
+    void writeTaggingFrequencyToCSV(const std::string& filename);
+    void writeCollisionHeatmapToCSV(const std::string& filename);
     QGraphicsScene* getScene() const { return scene; }
     std::vector<std::shared_ptr<Agent>>& getBlueAgents() { return blueAgents; }
     std::vector<std::shared_ptr<Agent>>& getRedAgents() { return redAgents; }
@@ -44,6 +50,9 @@ public:
 private:
     std::vector<std::shared_ptr<Agent>> blueAgents;
     std::vector<std::shared_ptr<Agent>> redAgents;
+    std::vector<std::pair<int, int>> scoreHistory;
+    std::unordered_map<Agent*, int> taggingFrequency;
+    std::vector<std::vector<int>> collisionHeatmap;
     QGraphicsScene* scene;
     QGraphicsEllipseItem* blueZone;
     QGraphicsEllipseItem* redZone;

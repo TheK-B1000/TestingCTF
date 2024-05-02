@@ -21,6 +21,7 @@ public:
     float calculateDistance(const QPointF& pos1, const QPointF& pos2) const;
     float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     float proximityThreshold;
+    int id;
     float tagProximityThreshold;
     void moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsPositions);

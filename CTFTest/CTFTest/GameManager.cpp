@@ -96,18 +96,25 @@ void GameManager::setupScene() {
     redFlag->setPolygon(redTriangle);
     redFlag->setBrush(Qt::red);
     scene->addItem(redFlag);
+
+    collisionHeatmap.resize(gameFieldWidth / 10, std::vector<int>(gameFieldHeight / 10, 0));
 }
 
 void GameManager::setupAgents() {
+    int blueAgentId = 1;
+    int redAgentId = 1;
+
     // Create agents
     for (int i = 0; i < 4; ++i) {
         auto blueAgent = std::make_shared<Agent>(Qt::blue, redFlagPos, blueBasePos, gameFieldWidth, gameFieldHeight, this);
         blueAgent->setPos(QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
+        blueAgent->id = blueAgentId++;
         scene->addItem(blueAgent.get());
         blueAgents.push_back(blueAgent);
 
         auto redAgent = std::make_shared<Agent>(Qt::red, blueFlagPos, redBasePos, gameFieldWidth, gameFieldHeight, this);
         redAgent->setPos(800 - QRandomGenerator::global()->bounded(100), QRandomGenerator::global()->bounded(500));
+        redAgent->id = redAgentId++;
         scene->addItem(redAgent.get());
         redAgents.push_back(redAgent);
     }
@@ -187,6 +194,16 @@ void GameManager::gameLoop() {
         stopGame();
         declareWinner();
     }
+
+    for (const auto& agent : blueAgents) {
+        for (const auto& otherAgent : redAgents) {
+            if (agent->collidesWithItem(otherAgent.get())) {
+                int x = static_cast<int>(agent->pos().x()) / 10;
+                int y = static_cast<int>(agent->pos().y()) / 10;
+                collisionHeatmap[x][y]++;
+            }
+        }
+    }
 }
 
 void GameManager::stopGame() {
@@ -220,6 +237,11 @@ void GameManager::declareWinner() {
     }
 
     scene->addItem(winnerText);
+
+    // Write data to CSV files
+    writeScoreHistoryToCSV("score_history.csv");
+    writeTaggingFrequencyToCSV("tagging_frequency.csv");
+    writeCollisionHeatmapToCSV("collision_heatmap.csv");
 }
 
 void GameManager::updateScoreDisplay() {
@@ -619,9 +641,57 @@ void GameManager::resetScoreAndGameOverText() {
 void GameManager::incrementBlueScore() {
     blueScore++;
     updateScoreDisplay();
+    scoreHistory.emplace_back(blueScore, redScore);
 }
 
 void GameManager::incrementRedScore() {
     redScore++;
     updateScoreDisplay();
+    scoreHistory.emplace_back(blueScore, redScore);
+}
+
+void GameManager::incrementTaggingFrequency(Agent* agent) {
+    taggingFrequency[agent]++;
+}
+
+void GameManager::writeScoreHistoryToCSV(const std::string& filename) {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        file << "Timestamp,Blue Score,Red Score\n";
+        for (const auto& score : scoreHistory) {
+            file << score.first << "," << score.second << "\n";
+        }
+        file.close();
+    }
+}
+
+void GameManager::writeTaggingFrequencyToCSV(const std::string& filename) {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        file << "Agent,Tagging Frequency\n";
+        for (const auto& agent : blueAgents) {
+            file << "Blue Agent " << agent->id << "," << taggingFrequency[agent.get()] << "\n";
+        }
+        for (const auto& agent : redAgents) {
+            file << "Red Agent " << agent->id << "," << taggingFrequency[agent.get()] << "\n";
+        }
+        file.close();
+    }
+}
+
+void GameManager::writeCollisionHeatmapToCSV(const std::string& filename) {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        for (const auto& row : collisionHeatmap) {
+            std::ostringstream oss;
+            for (size_t i = 0; i < row.size(); ++i) {
+                oss << row[i];
+                if (i < row.size() - 1) {
+                    oss << ",";
+                }
+            }
+            file << oss.str() << "\n";
+        }
+        file.close();
+    }
 }
