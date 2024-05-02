@@ -19,6 +19,7 @@ public:
     void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, int elapsedTime);
 
     float calculateDistance(const QPointF& pos1, const QPointF& pos2) const;
+    void moveTowardsTarget(const QPointF& target, qreal speed);
     float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     float proximityThreshold;
     float tagProximityThreshold;
