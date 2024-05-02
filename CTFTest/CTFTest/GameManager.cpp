@@ -133,7 +133,7 @@ void GameManager::setupScoreDisplay() {
 void GameManager::setupTimeDisplay() {
     // Add time remaining display
     timeRemainingTextItem = new QGraphicsTextItem();
-    timeRemainingTextItem->setPlainText("Time Remaining: 2500");
+    timeRemainingTextItem->setPlainText("Time Remaining: 4000");
     timeRemainingTextItem->setDefaultTextColor(Qt::black);
     timeRemainingTextItem->setFont(QFont("Arial", 16));
     timeRemainingTextItem->setPos(300, 10);
