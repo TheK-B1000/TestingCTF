@@ -34,7 +34,7 @@ GameManager::GameManager(QWidget* parent) : QGraphicsView(parent), gameFieldWidt
     setupTimeDisplay();
 
     // Start a timer to update agents
-    int gameDuration = 4000;
+    int gameDuration = 2500;
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
@@ -133,7 +133,7 @@ void GameManager::setupScoreDisplay() {
 void GameManager::setupTimeDisplay() {
     // Add time remaining display
     timeRemainingTextItem = new QGraphicsTextItem();
-    timeRemainingTextItem->setPlainText("Time Remaining: 4000");
+    timeRemainingTextItem->setPlainText("Time Remaining: 2500");
     timeRemainingTextItem->setDefaultTextColor(Qt::black);
     timeRemainingTextItem->setFont(QFont("Arial", 16));
     timeRemainingTextItem->setPos(300, 10);
