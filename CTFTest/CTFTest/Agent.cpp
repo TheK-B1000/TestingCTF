@@ -731,9 +731,12 @@ void Agent::setIsCarryingFlag(bool isCarrying) {
     if (isCarrying) {
         // Check if any other agent from the same team is already carrying the same flag
         for (const auto& agent : (side == "blue" ? gameManager->getBlueAgents() : gameManager->getRedAgents())) {
-            if (std::addressof(*agent) != this && agent->isCarryingFlag && agent->flagPos == this->flagPos) {
-                // Another agent from the same team is already carrying the same flag, so this agent cannot carry it
-                return;
+            if (std::addressof(*agent) != this && agent->isCarryingFlag) {
+                // Check if the flag being carried is the same as the flag the agent is trying to pick up
+                if ((side == "blue" && agent->flagPos == redFlagPos) || (side == "red" && agent->flagPos == blueFlagPos)) {
+                    // Another agent from the same team is already carrying the same flag, so this agent cannot carry it
+                    return;
+                }
             }
         }
     }
