@@ -184,7 +184,12 @@ void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsP
     qreal threshold = 20.0; // Adjust this threshold value as needed
 
     if (distance <= threshold) {
-        setIsCarryingFlag(true); // The agent reaches the flag and captures it
+        if (side == "blue") {
+            isCarryingRedFlag = true; // The blue agent reaches the red flag and captures it
+        }
+        else {
+            isCarryingBlueFlag = true; // The red agent reaches the blue flag and captures it
+        }
         hideFlag(); // Hide the flag when the agent picks it up
         setPen(QPen(Qt::yellow, 2)); // Set the agent's outline color to gold
     }
@@ -364,9 +369,9 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
                     }
 
                     QPointF direction = target - pos();
-                    qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
+                    qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y() + 1) ;
 
-                    if (distance >= 0) {
+                    if (distance > 0) {
                         direction /= distance; // Normalize the direction vector
 
                         // Move the agent towards the target
