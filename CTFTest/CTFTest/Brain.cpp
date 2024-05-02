@@ -3,18 +3,23 @@
 #include <QPointF>
 #include <cmath>
 
-Brain::Brain() : flagCaptured(false), score(0), proximityThreshold(250.0f), tagProximityThreshold(200.0f) {}
+Brain::Brain() : blueFlagCaptured(false), redFlagCaptured(false), score(0), proximityThreshold(250.0f), tagProximityThreshold(200.0f) {}
 
-BrainDecision Brain::makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle, bool inSide) {
+BrainDecision Brain::makeDecision(bool hasBlueFlag, bool hasRedFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle, bool inSide) {
     if (isTagged) {
-        flagCaptured = false; // Reset flag captured status when tagged
+        blueFlagCaptured = false; // Reset blue flag captured status when tagged
+        redFlagCaptured = false; // Reset red flag captured status when tagged
         return BrainDecision::ReturnToHomeZone;
     }
 
-    if (hasFlag) {
+    if (hasBlueFlag || hasRedFlag) {
         if (inHomeZone) {
-            if (!flagCaptured) {
-                flagCaptured = true;
+            if (hasBlueFlag && !blueFlagCaptured) {
+                blueFlagCaptured = true;
+                score++;
+            }
+            else if (hasRedFlag && !redFlagCaptured) {
+                redFlagCaptured = true;
                 score++;
             }
             return BrainDecision::CaptureFlag;

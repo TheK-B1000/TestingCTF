@@ -40,6 +40,8 @@ public:
 
     static int blueScore;
     static int redScore;
+    static QPointF getBlueZoneCenter();
+    static QPointF getRedZoneCenter();
 
 private:
     std::vector<std::shared_ptr<Agent>> blueAgents;

@@ -13,7 +13,8 @@ Agent::Agent(const QColor& color, const QPointF& flagPos, const QPointF& basePos
     blueFlagPos(blueFlagPos),
     redFlagPos(redFlagPos),
     basePos(basePos),
-    isCarryingFlag(false),
+    isCarryingBlueFlag(false),
+    isCarryingRedFlag(false),
     currentPathIndex(0),
     pathfinder(std::make_unique<Pathfinder>(sceneWidth, sceneHeight)),
     currentTarget(0, 0),
@@ -25,8 +26,8 @@ Agent::Agent(const QColor& color, const QPointF& flagPos, const QPointF& basePos
     isTagging(false),
     agentColor(color),
     gameManager(gameManager),
-    tagProximityThreshold(200.0f),
-    proximityThreshold(250.0f)
+    tagProximityThreshold(250.0f),
+    proximityThreshold(400.0f)
 {
     if (color == Qt::blue) {
         blueBasePos = basePos;
@@ -61,15 +62,20 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     }
     bool isStuckInMiddle = middleStuckTime > 5000; // Adjust the threshold value as needed
 
-    BrainDecision decision = brain->makeDecision(isCarryingFlag, checkInTeamZone(this->blueFlagPos, this->redFlagPos), distanceToFlag, isTagged, enemyHasFlag, distanceToEnemy, isTagging, isStuckInMiddle, inSide);
+    BrainDecision decision = brain->makeDecision(isCarryingBlueFlag, isCarryingRedFlag, checkInTeamZone(this->blueFlagPos, this->redFlagPos), distanceToFlag, isTagged, enemyHasFlag, distanceToEnemy, isTagging, isStuckInMiddle, inSide);
 
     if (isTagged) {
         // Change the agent's color to pink
         agentColor = Qt::magenta;
         setPen(QPen(agentColor, 2));
     }
-    else if (isCarryingFlag) {
-        // Change the agent's color to gold
+    else if (isCarryingBlueFlag) { // Should be isCarryingBlueFlag
+        // Change the blue agent's color to gold when carrying the blue flag
+        agentColor = Qt::yellow;
+        setPen(QPen(agentColor, 2));
+    }
+    else if (isCarryingRedFlag) {
+        // Change the red agent's color to gold when carrying the red flag
         agentColor = Qt::yellow;
         setPen(QPen(agentColor, 2));
     }
@@ -80,10 +86,9 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     }
 
     // Prioritize grabbing the flag if the agent is close to it or there are no enemies nearby
-    if (!isCarryingFlag && !isTagged && (distanceToFlag <= 250.0f || distanceToEnemy > 100.0f)) {
+    if (!isCarryingBlueFlag && !isCarryingRedFlag && !isTagged && (distanceToFlag <= 250.0f || distanceToEnemy > 100.0f)) { // Should be isCarryingBlueFlag
         decision = BrainDecision::GrabFlag;
     }
-
     switch (decision) {
     case BrainDecision::Explore:
         qDebug() << "Exploring field";
@@ -173,8 +178,12 @@ void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsP
     QPointF targetFlagPos = (side == "blue") ? redFlagPos : blueFlagPos;
     moveTowardsTarget(targetFlagPos, otherAgentsPositions);
 
-    // Check if the agent has reached the coordinates of the enemy team base
-    if (pos() == targetFlagPos) {
+    // Check if the agent has reached the coordinates of the enemy team's flag
+    QPointF agentPos = pos();
+    qreal distance = QLineF(agentPos, targetFlagPos).length();
+    qreal threshold = 20.0; // Adjust this threshold value as needed
+
+    if (distance <= threshold) {
         setIsCarryingFlag(true); // The agent reaches the flag and captures it
         hideFlag(); // Hide the flag when the agent picks it up
         setPen(QPen(Qt::yellow, 2)); // Set the agent's outline color to gold
@@ -192,13 +201,23 @@ void Agent::moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsP
             isTagged = false;
         }
 
-        if (isCarryingFlag && !isTagged) {
-            setIsCarryingFlag(false); // The agent reaches the base and drops the flag
-            showFlagAtStartingPosition(); // Show the flag at its starting position
-            incrementScore(); // Increment the score for the agent's team
+        if (side == "blue" && isCarryingBlueFlag && !isTagged) { // Replace isCarryingFlag with isCarryingBlueFlag
+            setIsCarryingFlag(false); // The blue agent reaches the base and drops the blue flag
+            showFlagAtStartingPosition(); // Show the blue flag at its starting position
+            incrementScore(); // Increment the score for the blue team
+        }
+        else if (side == "red" && isCarryingRedFlag && !isTagged) { // Replace isCarryingFlag with isCarryingRedFlag
+            setIsCarryingFlag(false); // The red agent reaches the base and drops the red flag
+            showFlagAtStartingPosition(); // Show the red flag at its starting position
+            incrementScore(); // Increment the score for the red team
         }
         else {
-            setIsCarryingFlag(false); // The agent reaches the base but is tagged, so it drops the flag without scoring
+            if (side == "blue") {
+                isCarryingBlueFlag = false; // The blue agent reaches the base but is tagged, so it drops the blue flag without scoring
+            }
+            else {
+                isCarryingRedFlag = false; // The red agent reaches the base but is tagged, so it drops the red flag without scoring
+            }
         }
 
         setPen(QPen(agentColor, 2)); // Restore the agent's original outline color
@@ -220,15 +239,19 @@ void Agent::moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsP
         }
     }
 }
-
 void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     QPointF targetPos;
-    if (isCarryingFlag) {
-        // If carrying the flag, set the target position to the base
-        targetPos = (side == "blue") ? blueBasePos : redBasePos;
+
+    if (side == "blue" && isCarryingBlueFlag) {
+        // If a blue agent is carrying the blue flag, set the target position to the blue base
+        targetPos = blueBasePos;
+    }
+    else if (side == "red" && isCarryingRedFlag) {
+        // If a red agent is carrying the red flag, set the target position to the red base
+        targetPos = redBasePos;
     }
     else {
-        // If not carrying the flag, set the target position to the enemy flag
+        // If not carrying a flag, set the target position to the enemy flag
         targetPos = (side == "blue") ? redFlagPos : blueFlagPos;
     }
 
@@ -236,16 +259,42 @@ void Agent::updatePath(const std::vector<std::pair<int, int>>& otherAgentsPositi
 
     // Check if the agent has reached the end of the path (target position)
     if (currentPathIndex >= path.size()) {
-        if (isCarryingFlag) {
-            // If carrying the flag, drop it at the base
-            setIsCarryingFlag(false);
-            showFlagAtStartingPosition();
-            incrementScore();
+        if (side == "blue" && isCarryingBlueFlag) {
+            // If a blue agent is carrying the blue flag and reaches the blue base
+            if (checkInTeamZone(this->blueFlagPos, this->redFlagPos)) {
+                isCarryingBlueFlag = false;
+                showFlagAtStartingPosition();
+                incrementScore();
+            }
+            else {
+                // If not in the team zone, drop the blue flag without scoring
+                isCarryingBlueFlag = false;
+                showFlagAtStartingPosition();
+            }
+        }
+        else if (side == "red" && isCarryingRedFlag) {
+            // If a red agent is carrying the red flag and reaches the red base
+            if (checkInTeamZone(this->blueFlagPos, this->redFlagPos)) {
+                isCarryingRedFlag = false;
+                showFlagAtStartingPosition();
+                incrementScore();
+            }
+            else {
+                // If not in the team zone, drop the red flag without scoring
+                isCarryingRedFlag = false;
+                showFlagAtStartingPosition();
+            }
         }
         else {
-            // If not carrying the flag, grab the enemy flag
-            setIsCarryingFlag(true);
-            hideFlag();
+            // If not carrying a flag, check if the agent is at the opposite color flag position
+            if (side == "blue" && qFuzzyCompare(pos().x(), redFlagPos.x()) && qFuzzyCompare(pos().y(), redFlagPos.y())) {
+                setIsCarryingFlag(true);
+                hideFlag();
+            }
+            else if (side == "red" && qFuzzyCompare(pos().x(), blueFlagPos.x()) && qFuzzyCompare(pos().y(), blueFlagPos.y())) {
+                setIsCarryingFlag(true);
+                hideFlag();
+            }
         }
     }
 }
@@ -268,7 +317,7 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
             for (Agent* enemy : otherAgents) {
                 if (enemy->side != side && !enemy->isTagged && enemy->canTagEnemy(this)) {
                     isTagged = true;
-                    if (isCarryingFlag) {
+                    if (isCarryingBlueFlag || isCarryingRedFlag) {
                         setIsCarryingFlag(false); // Drop the flag if the agent is tagged while carrying it
                         showFlagAtStartingPosition(); // Show the flag at its starting position
                     }
@@ -317,7 +366,7 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
                     QPointF direction = target - pos();
                     qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
 
-                    if (distance > 0) {
+                    if (distance >= 0) {
                         direction /= distance; // Normalize the direction vector
 
                         // Move the agent towards the target
@@ -326,17 +375,20 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
                         // Check if the agent has reached the target or a path point
                         if (distance <= tagProximityThreshold) {
                             closestEnemy->isTagged = true; // Tag the enemy
-                            if (isCarryingFlag) {
-                                setIsCarryingFlag(false); // Drop the flag if the agent is carrying it
+                            if (isCarryingBlueFlag || isCarryingRedFlag) {
+                                if (side == "blue") {
+                                    isCarryingBlueFlag = false; // Drop the blue flag if the blue agent is tagged while carrying it
+                                }
+                                else {
+                                    isCarryingRedFlag = false; // Drop the red flag if the red agent is tagged while carrying it
+                                }
                                 showFlagAtStartingPosition(); // Show the flag at its starting position
-                                setPen(QPen(agentColor, 2)); // Restore the agent's original outline color
                             }
-
                             lastTagTime = currentTime; // Update the lastTagTime when a tag is made
                             isTagging = false; // Set isTagging to false when the tagging behavior is completed
 
                             // Move towards the flag or explore the field after tagging the enemy
-                            if (isCarryingFlag) {
+                            if (isCarryingBlueFlag || isCarryingRedFlag) {
                                 moveTowardsBase(otherAgentsPositions, otherAgents);
                             }
                             else {
@@ -367,7 +419,6 @@ void Agent::exploreField(const std::vector<std::pair<int, int>>& otherAgentsPosi
         exploreField(otherAgentsPositions, otherAgents);
     }
 }
-
 void Agent::handleTagged(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
     // Set the target position to the agent's color base
     QPointF targetBasePos = (side == "blue") ? blueBasePos : redBasePos;
@@ -507,10 +558,16 @@ bool Agent::isInMiddleOfField() const {
 void Agent::hideFlag() {
     QGraphicsScene* scene = this->scene();
     QList<QGraphicsItem*> items = scene->items();
+
     for (QGraphicsItem* item : items) {
-        if (item->data(QGraphicsItem::UserType) == QGraphicsItem::UserType + 1) {
-            item->setVisible(false); // Hide the flag item
-            break;
+        QVariant userData = item->data(QGraphicsItem::UserType);
+        if (userData.typeId() == QMetaType::Int) {
+            if (side == "blue" && userData.toInt() == QGraphicsItem::UserType + 2) {
+                item->setVisible(false); // Hide the red flag
+            }
+            else if (side == "red" && userData.toInt() == QGraphicsItem::UserType + 1) {
+                item->setVisible(false); // Hide the blue flag
+            }
         }
     }
 }
@@ -519,24 +576,32 @@ void Agent::showFlagAtStartingPosition() {
     QGraphicsScene* scene = this->scene();
     QList<QGraphicsItem*> items = scene->items();
     for (QGraphicsItem* item : items) {
-        if (item->type() == QGraphicsItem::UserType + 1) { // Assuming the flag item has a unique user type
+        if ((side == "blue" && item->data(QGraphicsItem::UserType) == QGraphicsItem::UserType + 2) ||
+            (side == "red" && item->data(QGraphicsItem::UserType) == QGraphicsItem::UserType + 1)) {
             item->setVisible(true); // Show the flag item
+
+            // Set the flag position to the center of the team zone
+            QPointF teamZoneCenter;
+            if (side == "blue") {
+                teamZoneCenter = GameManager::getBlueZoneCenter();
+            }
+            else {
+                teamZoneCenter = GameManager::getRedZoneCenter();
+            }
+            item->setPos(teamZoneCenter);
+
             break;
         }
     }
 }
 
 void Agent::setIsCarryingFlag(bool isCarrying) {
-    if (isCarrying) {
-        // Check if any other agent from the same team is already carrying the flag
-        for (const auto& agent : (side == "blue" ? gameManager->getBlueAgents() : gameManager->getRedAgents())) {
-            if (agent->isCarryingFlag) {
-                // Another agent from the same team is already carrying the flag, so this agent cannot carry it
-                return;
-            }
-        }
+    if (side == "blue") {
+        isCarryingRedFlag = isCarrying;
     }
-    isCarryingFlag = isCarrying;
+    else {
+        isCarryingBlueFlag = isCarrying;
+    }
 }
 
 void Agent::setFlagPosition(const QPointF& position) {
@@ -567,5 +632,10 @@ void Agent::incrementScore() {
 }
 
 bool Agent::getIsCarryingFlag() const {
-    return isCarryingFlag;
+    if (side == "blue") {
+        return isCarryingRedFlag;
+    }
+    else {
+        return isCarryingBlueFlag;
+    }
 }

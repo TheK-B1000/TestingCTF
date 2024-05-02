@@ -61,7 +61,8 @@ private:
     const qint64 tagCooldownPeriod = 30000; // 30 seconds
     bool isTagged;
     bool isTagging;
-    bool isCarryingFlag;
+    bool isCarryingBlueFlag;
+    bool isCarryingRedFlag;
     int currentPathIndex;
     int gameFieldWidth;
     int gameFieldHeight;

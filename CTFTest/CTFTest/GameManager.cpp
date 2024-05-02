@@ -62,8 +62,6 @@ void GameManager::setupScene() {
 
     blueFlagPos = blueZone->rect().center();
     redFlagPos = redZone->rect().center();
-    blueBasePos = QPointF(50, 280);
-    redBasePos = QPointF(750, 280);
 
     // Add team areas fields
     QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
@@ -74,9 +72,13 @@ void GameManager::setupScene() {
     redArea->setPen(QPen(Qt::red, 2));
     scene->addItem(redArea);
 
+    blueBasePos = blueZone->rect().center();
+    redBasePos = redZone->rect().center();
+
     // Create flags
     QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
     blueFlag->setData(QGraphicsItem::UserType, QGraphicsItem::UserType + 1);
+    blueFlag->setData(Qt::UserRole, blueFlagPos);
     QPolygon blueTriangle;
     qreal blueFlagCenter = blueZone->rect().center().y();
     blueTriangle << QPoint(blueFlagPos.x() - 10, blueFlagCenter - 20)
@@ -87,7 +89,8 @@ void GameManager::setupScene() {
     scene->addItem(blueFlag);
 
     QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
-    redFlag->setData(QGraphicsItem::UserType, QGraphicsItem::UserType + 1);
+    redFlag->setData(QGraphicsItem::UserType, QGraphicsItem::UserType + 2);
+    redFlag->setData(Qt::UserRole, redFlagPos);
     QPolygon redTriangle;
     qreal redFlagCenter = redZone->rect().center().y();
     redTriangle << QPoint(redFlagPos.x() - 10, redFlagCenter - 20)
@@ -233,7 +236,7 @@ void GameManager::updateTimeDisplay() {
 
 void GameManager::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
-    // Reset the simulation to default settings
+    // Reset to default settings
     resetSimulation();
 }
 
@@ -624,4 +627,14 @@ void GameManager::incrementBlueScore() {
 void GameManager::incrementRedScore() {
     redScore++;
     updateScoreDisplay();
+}
+
+QPointF GameManager::getBlueZoneCenter() {
+    // Access blueZone member here
+    return QPointF(); 
+}
+
+QPointF GameManager::getRedZoneCenter() {
+    // Access redZone member here
+    return QPointF(); 
 }

@@ -1,32 +1,30 @@
 #ifndef BRAIN_H
 #define BRAIN_H
 
-#include <QString>
 #include <QPointF>
-#include "Agent.h"
 
 enum class BrainDecision {
     Explore,
     GrabFlag,
     CaptureFlag,
     AvoidEnemy,
-    ReturnToHomeZone,
     RecoverFlag,
     DefendFlag,
-    TagEnemy
+    TagEnemy,
+    ReturnToHomeZone
 };
 
 class Brain {
 public:
     Brain();
-
-    BrainDecision makeDecision(bool hasFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle, bool inSide);
+    BrainDecision makeDecision(bool hasBlueFlag, bool hasRedFlag, bool inHomeZone, float distanceToFlag, bool isTagged, bool enemyHasFlag, float distanceToNearestEnemy, bool isTagging, bool isStuckInMiddle, bool inSide);
 
 private:
-    bool flagCaptured;
+    bool blueFlagCaptured;
+    bool redFlagCaptured;
     int score;
     float proximityThreshold;
     float tagProximityThreshold;
 };
 
-#endif
+#endif 
