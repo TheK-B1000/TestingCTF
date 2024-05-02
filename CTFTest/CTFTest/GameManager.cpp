@@ -232,7 +232,7 @@ void GameManager::updateTimeDisplay() {
 }
 
 void GameManager::runTestCase1() {
-    // Test case 1: Default game setup (4 blue agents, 4 red agents)
+    // Default game setup (4 blue agents, 4 red agents)
     // Reset the simulation to default settings
     resetSimulation();
 }
@@ -289,7 +289,7 @@ void GameManager::runTestCase2(int agentCount) {
 }
 
 void GameManager::runTestCase3() {
-    // Test case 3: Change the position of team zones and flags
+    // Change the position of team zones and flags
 
     // Remove the old flags
     QList<QGraphicsItem*> items = scene->items();
@@ -391,7 +391,7 @@ void GameManager::runTestCase4() {
     delete blueZone;
     delete redZone;
 
-    // Create new team zones with different shapes
+    // Create new team zones with different sizes
     blueZone = new QGraphicsEllipseItem(30, 240, 120, 120);
     QPen bluePen(Qt::blue);
     bluePen.setWidth(3);
@@ -406,11 +406,11 @@ void GameManager::runTestCase4() {
     redZone->setBrush(Qt::NoBrush);
     scene->addItem(redZone);
 
-    // Update the flag positions
+    // Update flag positions
     blueFlagPos = blueZone->rect().center();
     redFlagPos = redZone->rect().center();
 
-    // Update the base positions
+    // Update base positions
     blueBasePos = QPointF(70, 280);
     redBasePos = QPointF(730, 280);
 

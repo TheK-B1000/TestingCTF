@@ -59,7 +59,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     else {
         middleStuckTime = 0;
     }
-    bool isStuckInMiddle = middleStuckTime > 5000; // Adjust the threshold value as needed
+    bool isStuckInMiddle = middleStuckTime > 5000;
 
     BrainDecision decision = brain->makeDecision(isCarryingFlag, checkInTeamZone(this->blueFlagPos, this->redFlagPos), distanceToFlag, isTagged, enemyHasFlag, distanceToEnemy, isTagging, isStuckInMiddle, inSide);
 
@@ -153,7 +153,7 @@ void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsP
     qreal distance = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
 
     if (distance > 0) {
-        direction /= distance; // Normalize the direction vector
+        direction /= distance; // Normalize
 
         // Move the agent towards the target
         setPos(pos() + direction * std::min(distance, speed));
@@ -172,14 +172,14 @@ void Agent::moveTowardsFlag(const std::vector<std::pair<int, int>>& otherAgentsP
     else {
         // The agent has reached the flag or the next point in the path
         if (currentPathIndex < path.size() - 1) {
-            currentPathIndex++; // Set the next point as the current target for the next update
+            currentPathIndex++; 
         }
     }
 
     // Check if the agent has reached the coordinates of the enemy team base
     if (pos() == targetFlagPos) {
         setIsCarryingFlag(true); // The agent reaches the flag and captures it
-        hideFlag(); // Hide the flag when the agent picks it up
+        hideFlag(); 
         setPen(QPen(Qt::yellow, 2)); // Set the agent's outline color to gold
     }
 }
@@ -246,7 +246,7 @@ void Agent::moveTowardsBase(const std::vector<std::pair<int, int>>& otherAgentsP
 
         // Check if the agent has reached the current target or the path point
         if (distance <= speed) {
-            currentPathIndex++; // Prepare for the next waypoint
+            currentPathIndex++; 
 
             // Check if the agent has reached the end of the path (base position)
             if (currentPathIndex >= path.size()) {
@@ -704,7 +704,7 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
                 // Check if the agent has reached the target or a path point
                 if (distance <= speed) {
                     if (currentPathIndex < path.size() - 1) {
-                        currentPathIndex++; // Set the next point as the current target for the next update
+                        currentPathIndex++; 
                     }
                     else {
                         closestEnemy->isTagged = true; // Tag the enemy
@@ -712,7 +712,7 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
 
                         // Continue the agent's movement after tagging the enemy
                         if (path.size() > currentPathIndex + 1) {
-                            currentPathIndex++; // Set the next point as the current target for the next update
+                            currentPathIndex++; 
                         }
                         else {
                             // Reached the end of the path, generate a new exploration target
@@ -723,21 +723,21 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
                                 QRandomGenerator::global()->bounded(0, gameFieldHeight));
                             path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
                         }
-                        isTagging = false; // Set isTagging to false when the tagging behavior is completed
+                        isTagging = false;
                     }
                 }
             }
             else {
                 // The agent has reached the enemy
                 closestEnemy->isTagged = true; // Tag the enemy
-                lastTagTime = currentTime; // Update the lastTagTime when a tag is made
+                lastTagTime = currentTime; \
 
                 // Continue the agent's movement after tagging the enemy
                 if (path.size() > currentPathIndex + 1) {
-                    currentPathIndex++; // Set the next point as the current target for the next update
+                    currentPathIndex++; 
                 }
                 else {
-                    // Reached the end of the path, generate a new exploration target
+                    // Reached the end of the path
                     path.clear();
                     currentPathIndex = 0;
                     std::vector<std::pair<int, int>> agentPositions = getOtherAgentPositions(otherAgentsPositions);
@@ -745,7 +745,7 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
                         QRandomGenerator::global()->bounded(0, gameFieldHeight));
                     path = pathfinder->findPath(pos().x(), pos().y(), explorationTarget.x(), explorationTarget.y(), otherAgentsPositions, agentPositions);
                 }
-                isTagging = false; // Set isTagging to false when the tagging behavior is completed
+                isTagging = false; 
             }
         }
     }
@@ -754,7 +754,6 @@ void Agent::defendFlag(std::vector<Agent*>& otherAgents, const std::vector<std::
 
         // Check if there are no more enemies nearby
         if (distanceToNearestEnemy(otherAgentsPositions) > tagProximityThreshold) {
-            // If no enemies are nearby, either explore the field or move towards the enemy flag
             if (QRandomGenerator::global()->generateDouble() < 0.5) {
                 path.clear();
                 currentPathIndex = 0;
